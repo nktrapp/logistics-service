@@ -39,3 +39,22 @@ logs/
 
 # ─── Docker ───
 docker-compose.override.yml
+
+# ─── Terraform (state & tfvars embed secrets in plaintext — never commit) ───
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+
+# ─── Secrets / credentials ───
+*.pem
+*.p12
+*.pfx
+*.jks
+id_rsa
+id_rsa.*
+credentials
+.aws/

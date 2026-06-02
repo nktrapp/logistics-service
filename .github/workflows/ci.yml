@@ -4,98 +4,94 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
-env:
-  JAVA_VERSION: '25'
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  security-events: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build & Test
+  build:
+    name: Build, Test & Analyze
     runs-on: ubuntu-latest
-
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for SonarQube blame / PR analysis
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+      - name: Set up JDK 21 (Gradle runtime; toolchain compiles/tests on Java 25)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
+          java-version: '21'
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build, test & coverage (JaCoCo)
+        run: ./gradlew build jacocoTestReport --no-daemon
+
+      - name: Publish test results (PR status)
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', '**/gradle.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
+          files: "**/build/test-results/test/*.xml"
 
-      - name: Build
-        run: ./gradlew build -x test --no-daemon
+      - name: JaCoCo coverage comment (PR status)
+        if: github.event_name == 'pull_request'
+        uses: madrapse/jacoco-report@v1.7.1
+        with:
+          paths: "**/build/reports/jacoco/test/jacocoTestReport.xml"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: Coverage report
+          min-coverage-overall: 0
+          min-coverage-changed-files: 0
 
-      - name: Test
-        run: ./gradlew test --no-daemon
+      - name: SonarQube analysis (skipped until SONAR_TOKEN is set)
+        if: ${{ env.SONAR_TOKEN != '' }}
+        run: ./gradlew sonar --no-daemon
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # enables PR quality-gate decoration
 
-      - name: JaCoCo Report
-        run: ./gradlew jacocoTestReport --no-daemon
-
-      - name: Upload Test Reports
+      - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports
+          name: reports
           path: |
             **/build/reports/tests/
             **/build/reports/jacoco/
 
-  docker:
-    name: Build & Push Docker Image
+  security:
+    name: Security Scan (Trivy)
     runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main'
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract version
-        id: version
-        run: |
-          VERSION=$(grep '^version' gradle.properties | cut -d'=' -f2 | tr -d ' ')
-          SHA_SHORT=$(git rev-parse --short HEAD)
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "sha=${SHA_SHORT}" >> $GITHUB_OUTPUT
-
-      - name: Build and Push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./app/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/logistics-service:${{ steps.version.outputs.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/logistics-service:${{ steps.version.outputs.sha }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/logistics-service:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Scan image (Trivy)
+      - name: Trivy filesystem scan (dependencies & config)
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/logistics-service:${{ steps.version.outputs.sha }}
-          format: table
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          exit-code: '0'  # report-only — do not fail the build on findings
+
+      - name: Upload Trivy results to the Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
