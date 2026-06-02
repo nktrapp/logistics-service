@@ -13,4 +13,4 @@ plugins {
 
 rootProject.name = "logistics-service"
 
-include("domain", "core", "infrastructure", "app")
+include("domain", "infrastructure", "application")

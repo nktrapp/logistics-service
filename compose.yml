@@ -1,12 +1,7 @@
 name: logistics-service
 
-# Self-contained local stack for the logistics-service (independent project).
-# Brings up MongoDB (single-node replica set), Redis (ViaCEP cache), MiniStack (SQS) and the service itself.
-# Both FIFO queues are created so the service can consume package events and publish route events.
-
 services:
 
-  # ─── MiniStack (AWS local: SQS, Secrets Manager) ───
   ministack:
     image: ministackorg/ministack:latest
     ports:
@@ -24,7 +19,6 @@ services:
       retries: 5
       start_period: 5s
 
-  # ─── MongoDB (single-node replica set — required for multi-document transactions) ───
   mongodb:
     image: mongo:8.0
     command: ["--replSet", "rs0", "--bind_ip_all"]
@@ -35,14 +29,12 @@ services:
     volumes:
       - mongodb-data:/data/db
     healthcheck:
-      # Idempotently initiate the replica set, then report healthy only once a primary is elected.
       test: ["CMD", "mongosh", "--quiet", "--eval", "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}) }; db.hello().isWritablePrimary || quit(1)"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 20s
 
-  # ─── Redis (ViaCEP lookup cache) ───
   redis:
     image: redis:7.4-alpine
     ports:
@@ -56,7 +48,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─── Init container: creates the FIFO queues in MiniStack ───
   aws-init:
     image: amazon/aws-cli:2.22.35
     depends_on:
@@ -92,11 +83,10 @@ services:
 
         echo "SQS FIFO queues created successfully"
 
-  # ─── Logistics Service ───
   logistics-service:
     build:
       context: .
-      dockerfile: app/Dockerfile
+      dockerfile: application/Dockerfile
     ports:
       - "8082:8080"
     environment:
@@ -123,7 +113,6 @@ services:
       retries: 5
       start_period: 60s
 
-  # ─── Mongo Express (debug UI) ───
   mongo-express:
     image: mongo-express:1.0
     ports:
