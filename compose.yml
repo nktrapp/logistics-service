@@ -1,0 +1,141 @@
+name: logistics-service
+
+# Self-contained local stack for the logistics-service (independent project).
+# Brings up MongoDB (single-node replica set), Redis (ViaCEP cache), MiniStack (SQS) and the service itself.
+# Both FIFO queues are created so the service can consume package events and publish route events.
+
+services:
+
+  # ─── MiniStack (AWS local: SQS, Secrets Manager) ───
+  ministack:
+    image: ministackorg/ministack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs,secretsmanager,cloudwatch
+      - DEFAULT_REGION=us-east-1
+      - EAGER_SERVICE_LOADING=1
+    volumes:
+      - ministack-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_ministack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ─── MongoDB (single-node replica set — required for multi-document transactions) ───
+  mongodb:
+    image: mongo:8.0
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: admin
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      # Idempotently initiate the replica set, then report healthy only once a primary is elected.
+      test: ["CMD", "mongosh", "--quiet", "--eval", "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}) }; db.hello().isWritablePrimary || quit(1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ─── Redis (ViaCEP lookup cache) ───
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Init container: creates the FIFO queues in MiniStack ───
+  aws-init:
+    image: amazon/aws-cli:2.22.35
+    depends_on:
+      ministack:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        # Dead Letter Queues (FIFO)
+        aws --endpoint-url=http://ministack:4566 sqs create-queue --queue-name package-events-dlq.fifo --attributes FifoQueue=true
+        aws --endpoint-url=http://ministack:4566 sqs create-queue --queue-name logistics-events-dlq.fifo --attributes FifoQueue=true
+
+        PKG_DLQ_ARN=$$(aws --endpoint-url=http://ministack:4566 sqs get-queue-attributes \
+          --queue-url http://ministack:4566/000000000000/package-events-dlq.fifo \
+          --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)
+
+        LOG_DLQ_ARN=$$(aws --endpoint-url=http://ministack:4566 sqs get-queue-attributes \
+          --queue-url http://ministack:4566/000000000000/logistics-events-dlq.fifo \
+          --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)
+
+        aws --endpoint-url=http://ministack:4566 sqs create-queue \
+          --queue-name package-events-queue.fifo \
+          --attributes "{\"FifoQueue\":\"true\",\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"$$PKG_DLQ_ARN\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\"}"
+
+        aws --endpoint-url=http://ministack:4566 sqs create-queue \
+          --queue-name logistics-events-queue.fifo \
+          --attributes "{\"FifoQueue\":\"true\",\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"$$LOG_DLQ_ARN\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\"}"
+
+        echo "SQS FIFO queues created successfully"
+
+  # ─── Logistics Service ───
+  logistics-service:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/logistics_db?directConnection=true
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_CLOUD_AWS_ENDPOINT: http://ministack:4566
+      SPRING_CLOUD_AWS_SQS_ENDPOINT: http://ministack:4566
+      SPRING_CLOUD_AWS_CREDENTIALS_ACCESS_KEY: test
+      SPRING_CLOUD_AWS_CREDENTIALS_SECRET_KEY: test
+      SPRING_CLOUD_AWS_REGION_STATIC: us-east-1
+      APP_VIACEP_BASE_URL: https://viacep.com.br/ws
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      aws-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/management/health/liveness"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # ─── Mongo Express (debug UI) ───
+  mongo-express:
+    image: mongo-express:1.0
+    ports:
+      - "8888:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongodb:27017/?directConnection=true
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  ministack-data:
+  mongodb-data:
+  redis-data:

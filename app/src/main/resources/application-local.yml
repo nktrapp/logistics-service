@@ -1,7 +1,7 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://localhost:27017/logistics_db
+      uri: mongodb://localhost:27017/logistics_db?directConnection=true
       auto-index-creation: true
     redis:
       host: localhost

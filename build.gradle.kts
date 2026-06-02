@@ -41,7 +41,9 @@ subprojects {
         testCompileOnly("org.projectlombok:lombok:$lombokVersion")
         testAnnotationProcessor("org.projectlombok:lombok:$lombokVersion")
 
+        testImplementation(platform("org.junit:junit-bom:$junitVersion"))
         testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
+        testRuntimeOnly("org.junit.platform:junit-platform-launcher")
         testImplementation("org.assertj:assertj-core:$assertjVersion")
         testImplementation("org.mockito:mockito-core:$mockitoVersion")
         testImplementation("org.mockito:mockito-junit-jupiter:$mockitoVersion")
@@ -49,6 +51,8 @@ subprojects {
 
     tasks.test {
         useJUnitPlatform()
+        // ByteBuddy/Mockito do not yet recognize the JDK 25 class-file version; allow it.
+        systemProperty("net.bytebuddy.experimental", "true")
         finalizedBy(tasks.jacocoTestReport)
     }
 

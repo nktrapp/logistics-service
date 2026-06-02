@@ -122,6 +122,20 @@ public class MongoOutboxRepository implements OutboxRepository {
         return new RetryOutcome(true, retryCount == null ? 0 : retryCount);
     }
 
+    @Override
+    public long deletePublishedBefore(Instant threshold) {
+        Query query = Query.query(new Criteria().andOperator(
+                Criteria.where("status").is(STATUS_PUBLISHED),
+                Criteria.where("publishedAt").lt(threshold)
+        ));
+        return mongoTemplate.remove(query, OutboxDocument.class).getDeletedCount();
+    }
+
+    @Override
+    public long countFailed() {
+        return mongoTemplate.count(Query.query(Criteria.where("status").is(STATUS_FAILED)), OutboxDocument.class);
+    }
+
     private Optional<OutboxEntry> claimNext(Instant claimedAt, Instant retryTimedOutBefore) {
         Criteria pendingCriteria = new Criteria().andOperator(
                 Criteria.where("status").is(STATUS_PENDING),

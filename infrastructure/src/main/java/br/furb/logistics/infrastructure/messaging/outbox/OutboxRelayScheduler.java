@@ -23,7 +23,7 @@ public class OutboxRelayScheduler {
     private final EventPublisherPort eventPublisherPort;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.messaging.outbound-queue:logistics-events-queue}")
+    @Value("${app.messaging.outbound-queue:logistics-events-queue.fifo}")
     private String outboundQueue;
 
     @Value("${app.outbox.relay.batch-size:50}")
@@ -37,6 +37,9 @@ public class OutboxRelayScheduler {
 
     @Value("${app.outbox.relay.processing-timeout-ms:60000}")
     private long processingTimeoutMs;
+
+    @Value("${app.outbox.retention.published-retention-ms:604800000}")
+    private long publishedRetentionMs;
 
     @Scheduled(fixedDelayString = "${app.outbox.relay.fixed-delay-ms:2000}")
     public void relay() {
@@ -53,7 +56,8 @@ public class OutboxRelayScheduler {
         for (OutboxEntry entry : pendingEvents) {
             try {
                 String envelope = buildEnvelope(entry);
-                eventPublisherPort.publish(outboundQueue, envelope);
+                String groupId = entry.groupId() != null ? entry.groupId() : entry.eventId();
+                eventPublisherPort.publish(outboundQueue, envelope, groupId, entry.eventId());
                 outboxRepository.markAsPublished(entry.eventId(), Instant.now());
             } catch (Exception e) {
                 OutboxRepository.RetryOutcome retryOutcome = outboxRepository.markForRetry(
@@ -70,6 +74,15 @@ public class OutboxRelayScheduler {
 
                 log.error("[outbox-relay] Failed to publish event {} after {} attempts, marking as failed", entry.eventId(), retryOutcome.retryCount(), e);
             }
+        }
+    }
+
+    @Scheduled(fixedDelayString = "${app.outbox.retention.fixed-delay-ms:3600000}")
+    public void purgePublished() {
+        Instant threshold = Instant.now().minusMillis(publishedRetentionMs);
+        long deleted = outboxRepository.deletePublishedBefore(threshold);
+        if (deleted > 0) {
+            log.info("[outbox-retention] Purged {} published events older than {}", deleted, threshold);
         }
     }
 

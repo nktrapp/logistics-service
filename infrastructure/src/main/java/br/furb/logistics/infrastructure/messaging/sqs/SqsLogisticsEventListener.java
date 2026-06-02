@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -19,36 +20,53 @@ public class SqsLogisticsEventListener {
     private final RecalculateRouteUseCase recalculateRouteUseCase;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.messaging.inbound-queue:package-events-queue}")
+    @Value("${app.messaging.inbound-queue:package-events-queue.fifo}")
     private String inboundQueue;
 
-    @SqsListener("${app.messaging.inbound-queue:package-events-queue}")
+    @SqsListener("${app.messaging.inbound-queue:package-events-queue.fifo}")
     public void onMessage(String message) {
         try {
-            log.info("[sqs-listener] Received message from {}", inboundQueue);
-
             JsonNode root = objectMapper.readTree(message);
-            String eventId = root.get("eventId").asText();
-            String eventType = root.get("eventType").asText();
-            JsonNode payload = root.get("payload");
+            String eventId = requireText(root, "eventId");
+            String eventType = requireText(root, "eventType");
+            JsonNode payload = requireNode(root, "payload");
+            String packageId = requireText(payload, "packageId");
 
-            switch (eventType) {
-                case "package.created" -> {
-                    String packageId = payload.get("packageId").asText();
-                    String senderCep = payload.get("senderCep").asText();
-                    String recipientCep = payload.get("recipientCep").asText();
-                    calculateRouteUseCase.execute(eventId, packageId, senderCep, recipientCep);
+            MDC.put("eventId", eventId);
+            MDC.put("packageId", packageId);
+            try {
+                log.info("[sqs-listener] Received {} from {}", eventType, inboundQueue);
+
+                switch (eventType) {
+                    case "package.created" -> calculateRouteUseCase.execute(eventId, packageId,
+                            requireText(payload, "senderCep"), requireText(payload, "recipientCep"));
+                    case "package.destination.changed" -> recalculateRouteUseCase.execute(eventId, packageId,
+                            requireText(payload, "newCep"));
+                    default -> log.warn("[sqs-listener] Unknown event type: {}", eventType);
                 }
-                case "package.destination.changed" -> {
-                    String packageId = payload.get("packageId").asText();
-                    String newCep = payload.get("newCep").asText();
-                    recalculateRouteUseCase.execute(eventId, packageId, newCep);
-                }
-                default -> log.warn("[sqs-listener] Unknown event type: {}", eventType);
+            } finally {
+                MDC.remove("eventId");
+                MDC.remove("packageId");
             }
         } catch (Exception e) {
             log.error("[sqs-listener] Error processing message from {}", inboundQueue, e);
             throw new RuntimeException("Failed to process SQS message", e);
         }
+    }
+
+    private static String requireText(JsonNode parent, String field) {
+        JsonNode node = parent.get(field);
+        if (node == null || node.isNull()) {
+            throw new IllegalArgumentException("Missing required event field: " + field);
+        }
+        return node.asText();
+    }
+
+    private static JsonNode requireNode(JsonNode parent, String field) {
+        JsonNode node = parent.get(field);
+        if (node == null || node.isNull()) {
+            throw new IllegalArgumentException("Missing required event field: " + field);
+        }
+        return node;
     }
 }

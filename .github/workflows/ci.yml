@@ -90,3 +90,12 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/logistics-service:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Scan image (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/logistics-service:${{ steps.version.outputs.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'  # report-only — do not fail the build on findings

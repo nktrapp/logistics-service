@@ -61,8 +61,8 @@ app:
     retry-max-attempts: 3
     retry-backoff-ms: 1000
   messaging:
-    inbound-queue: ${APP_MESSAGING_INBOUND_QUEUE:package-events-queue}
-    outbound-queue: ${APP_MESSAGING_OUTBOUND_QUEUE:logistics-events-queue}
+    inbound-queue: ${APP_MESSAGING_INBOUND_QUEUE:package-events-queue.fifo}
+    outbound-queue: ${APP_MESSAGING_OUTBOUND_QUEUE:logistics-events-queue.fifo}
   outbox:
     relay:
       fixed-delay-ms: 2000
@@ -70,3 +70,6 @@ app:
       max-attempts: 5
       retry-delay-ms: 5000
       processing-timeout-ms: 60000
+    retention:
+      fixed-delay-ms: 3600000        # purge sweep interval (1h)
+      published-retention-ms: 604800000  # keep published events 7 days

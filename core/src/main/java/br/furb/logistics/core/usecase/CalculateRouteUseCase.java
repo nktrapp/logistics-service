@@ -18,7 +18,7 @@ import br.furb.logistics.domain.port.OutboxRepository;
 import br.furb.logistics.domain.port.RouteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -40,16 +40,17 @@ public class CalculateRouteUseCase {
     private final OutboxRepository outboxRepository;
     private final InboxRepository inboxRepository;
     private final RouteCalculationService routeCalculationService;
+    private final TransactionTemplate transactionTemplate;
 
-    @Transactional
     public RouteResponse execute(String eventId, String packageId, String senderCep, String recipientCep) {
-                if (!inboxRepository.saveIfAbsent(eventId, "package.created")) {
+        if (inboxRepository.existsByEventId(eventId)) {
             log.info("[calculate-route] Event {} already processed, skipping", eventId);
             return null;
         }
 
         log.info("[calculate-route] Calculating route for package {} from {} to {}", packageId, senderCep, recipientCep);
 
+        // External lookups (ViaCEP) and the routing computation run OUTSIDE the write transaction.
         CepInfo originCepInfo = cepLookupPort.findByCep(senderCep)
                 .orElseThrow(() -> new CepValidationException(senderCep));
 
@@ -72,9 +73,28 @@ public class CalculateRouteUseCase {
         RouteCalculationService.RouteResult result = selectedRoute.routeResult();
 
         Map<String, Hub> hubMap = allHubs.stream().collect(Collectors.toMap(Hub::getId, h -> h));
+        List<Route.RouteHop> hops = buildHops(result.path(), hubMap);
 
+        Route existingRoute = routeRepository.findByPackageId(packageId).orElse(null);
+        Route route = buildRoute(existingRoute, packageId, originHub.getId(), destinationHub.getId(), hops, result);
+
+        // Narrow transaction: claim the inbox key, persist the route and the outbox event atomically.
+        return transactionTemplate.execute(status -> {
+            if (!inboxRepository.saveIfAbsent(eventId, "package.created")) {
+                log.info("[calculate-route] Event {} already processed, skipping", eventId);
+                return null;
+            }
+
+            Route saved = routeRepository.save(route);
+            outboxRepository.save(buildCalculatedEvent(saved, packageId, originHub, destinationHub, hops, result));
+
+            log.info("[calculate-route] Route {} calculated for package {}", saved.getId(), packageId);
+            return RouteMapper.INSTANCE.toResponse(saved);
+        });
+    }
+
+    private List<Route.RouteHop> buildHops(List<String> path, Map<String, Hub> hubMap) {
         List<Route.RouteHop> hops = new ArrayList<>();
-        List<String> path = result.path();
         for (int i = 0; i < path.size(); i++) {
             Hub hub = hubMap.get(path.get(i));
             hops.add(Route.RouteHop.builder()
@@ -83,12 +103,15 @@ public class CalculateRouteUseCase {
                     .order(i + 1)
                     .build());
         }
+        return hops;
+    }
 
-        Route existingRoute = routeRepository.findByPackageId(packageId).orElse(null);
-        Route route = buildRoute(existingRoute, packageId, originHub.getId(), destinationHub.getId(), hops, result);
-
-        Route saved = routeRepository.save(route);
-
+    private RouteCalculatedEvent buildCalculatedEvent(Route saved,
+                                                      String packageId,
+                                                      Hub originHub,
+                                                      Hub destinationHub,
+                                                      List<Route.RouteHop> hops,
+                                                      RouteCalculationService.RouteResult result) {
         List<RouteCalculatedEvent.HopInfo> eventHops = hops.stream()
                 .map(hop -> RouteCalculatedEvent.HopInfo.builder()
                         .hubId(hop.getHubId())
@@ -97,7 +120,7 @@ public class CalculateRouteUseCase {
                         .build())
                 .toList();
 
-        RouteCalculatedEvent event = RouteCalculatedEvent.builder()
+        return RouteCalculatedEvent.builder()
                 .payload(RouteCalculatedEvent.Payload.builder()
                         .packageId(packageId)
                         .routeId(saved.getId())
@@ -118,12 +141,6 @@ public class CalculateRouteUseCase {
                         .estimatedTransitHours(result.totalTransitHours())
                         .build())
                 .build();
-
-        outboxRepository.save(event);
-
-        log.info("[calculate-route] Route {} calculated for package {}", saved.getId(), packageId);
-
-        return RouteMapper.INSTANCE.toResponse(saved);
     }
 
         private Route buildRoute(Route existingRoute,
@@ -149,14 +166,20 @@ public class CalculateRouteUseCase {
         }
 
         private List<Hub> getActiveCandidates(String city, String state, List<Hub> activeHubs) {
-                List<Hub> cityCandidates = hubRepository.findByCityAndState(city, state).stream()
-                                .filter(candidate -> activeHubs.stream().anyMatch(activeHub -> activeHub.getId().equals(candidate.getId())))
+                // Prefer active hubs in the same city+state.
+                List<Hub> cityCandidates = activeHubs.stream()
+                                .filter(hub -> state.equalsIgnoreCase(hub.getState()) && city.equalsIgnoreCase(hub.getCity()))
                                 .toList();
-
-                if (isEmpty(cityCandidates)) {
-                        return activeHubs;
+                if (!isEmpty(cityCandidates)) {
+                        return cityCandidates;
                 }
 
-                return cityCandidates;
+                // Fall back to active hubs in the same state (regional) instead of every hub in the network.
+                // A precise nearest-hub (haversine) fallback would require geocoding the CEP, which ViaCEP does not provide.
+                // When no same-state hub exists the candidate list is empty and route selection fails explicitly,
+                // rather than silently routing the package through arbitrary, unrelated hubs.
+                return activeHubs.stream()
+                                .filter(hub -> state.equalsIgnoreCase(hub.getState()))
+                                .toList();
         }
 }

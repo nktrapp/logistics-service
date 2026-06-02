@@ -17,7 +17,7 @@ import br.furb.logistics.domain.port.OutboxRepository;
 import br.furb.logistics.domain.port.RouteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -39,21 +39,22 @@ public class RecalculateRouteUseCase {
     private final OutboxRepository outboxRepository;
     private final InboxRepository inboxRepository;
     private final RouteCalculationService routeCalculationService;
+    private final TransactionTemplate transactionTemplate;
 
-    @Transactional
     public void execute(String eventId, String packageId, String newRecipientCep) {
-                if (!inboxRepository.saveIfAbsent(eventId, "package.destination.changed")) {
+        if (inboxRepository.existsByEventId(eventId)) {
             log.info("[recalculate-route] Event {} already processed, skipping", eventId);
             return;
         }
 
         log.info("[recalculate-route] Recalculating route for package {} to new CEP {}", packageId, newRecipientCep);
 
+        // External lookups (ViaCEP) and the routing computation run OUTSIDE the write transaction.
         Route existingRoute = routeRepository.findByPackageId(packageId).orElse(null);
 
-                String originHubId = nonNull(existingRoute)
-                                ? existingRoute.getOriginHubId()
-                                : hubRepository.findAllActive().getFirst().getId();
+        String originHubId = nonNull(existingRoute)
+                ? existingRoute.getOriginHubId()
+                : hubRepository.findAllActive().getFirst().getId();
 
         CepInfo destinationCepInfo = cepLookupPort.findByCep(newRecipientCep)
                 .orElseThrow(() -> new CepValidationException(newRecipientCep));
@@ -74,9 +75,26 @@ public class RecalculateRouteUseCase {
         RouteCalculationService.RouteResult result = selectedRoute.routeResult();
 
         Map<String, Hub> hubMap = routingHubs.stream().collect(Collectors.toMap(Hub::getId, h -> h));
+        List<Route.RouteHop> hops = buildHops(result.path(), hubMap);
 
+        Route route = buildRoute(existingRoute, packageId, originHubId, destinationHub.getId(), hops, result);
+
+        // Narrow transaction: claim the inbox key, persist the route and the outbox event atomically.
+        transactionTemplate.executeWithoutResult(status -> {
+            if (!inboxRepository.saveIfAbsent(eventId, "package.destination.changed")) {
+                log.info("[recalculate-route] Event {} already processed, skipping", eventId);
+                return;
+            }
+
+            Route saved = routeRepository.save(route);
+            outboxRepository.save(buildRecalculatedEvent(saved, packageId, originHub, destinationHub, hops, result));
+
+            log.info("[recalculate-route] Route {} recalculated for package {}", saved.getId(), packageId);
+        });
+    }
+
+    private List<Route.RouteHop> buildHops(List<String> path, Map<String, Hub> hubMap) {
         List<Route.RouteHop> hops = new ArrayList<>();
-        List<String> path = result.path();
         for (int i = 0; i < path.size(); i++) {
             Hub hub = hubMap.get(path.get(i));
             hops.add(Route.RouteHop.builder()
@@ -85,11 +103,15 @@ public class RecalculateRouteUseCase {
                     .order(i + 1)
                     .build());
         }
+        return hops;
+    }
 
-        Route route = buildRoute(existingRoute, packageId, originHubId, destinationHub.getId(), hops, result);
-
-        Route saved = routeRepository.save(route);
-
+    private RouteRecalculatedEvent buildRecalculatedEvent(Route saved,
+                                                          String packageId,
+                                                          Hub originHub,
+                                                          Hub destinationHub,
+                                                          List<Route.RouteHop> hops,
+                                                          RouteCalculationService.RouteResult result) {
         List<RouteCalculatedEvent.HopInfo> eventHops = hops.stream()
                 .map(hop -> RouteCalculatedEvent.HopInfo.builder()
                         .hubId(hop.getHubId())
@@ -98,7 +120,7 @@ public class RecalculateRouteUseCase {
                         .build())
                 .toList();
 
-        RouteRecalculatedEvent event = RouteRecalculatedEvent.builder()
+        return RouteRecalculatedEvent.builder()
                 .payload(RouteRecalculatedEvent.Payload.builder()
                         .packageId(packageId)
                         .routeId(saved.getId())
@@ -120,10 +142,6 @@ public class RecalculateRouteUseCase {
                         .estimatedTransitHours(result.totalTransitHours())
                         .build())
                 .build();
-
-        outboxRepository.save(event);
-
-        log.info("[recalculate-route] Route {} recalculated for package {}", saved.getId(), packageId);
     }
 
         private Route buildRoute(Route existingRoute,
@@ -169,14 +187,19 @@ public class RecalculateRouteUseCase {
         }
 
         private List<Hub> getActiveCandidates(String city, String state, List<Hub> activeHubs) {
-                List<Hub> cityCandidates = hubRepository.findByCityAndState(city, state).stream()
-                                .filter(candidate -> activeHubs.stream().anyMatch(activeHub -> activeHub.getId().equals(candidate.getId())))
+                // Prefer active hubs in the same city+state.
+                List<Hub> cityCandidates = activeHubs.stream()
+                                .filter(hub -> state.equalsIgnoreCase(hub.getState()) && city.equalsIgnoreCase(hub.getCity()))
                                 .toList();
-
-                if (isEmpty(cityCandidates)) {
-                        return activeHubs;
+                if (!isEmpty(cityCandidates)) {
+                        return cityCandidates;
                 }
 
-                return cityCandidates;
+                // Fall back to active hubs in the same state (regional) instead of every hub in the network.
+                // When no same-state hub exists the candidate list is empty and route selection fails explicitly,
+                // rather than silently routing the package through arbitrary, unrelated hubs.
+                return activeHubs.stream()
+                                .filter(hub -> state.equalsIgnoreCase(hub.getState()))
+                                .toList();
         }
 }
