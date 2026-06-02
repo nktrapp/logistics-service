@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: logistics-service
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# ─── Management / Actuator ───
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,loggers
+      base-path: /management
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: when-authorized
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  health:
+    mongo:
+      enabled: true
+    redis:
+      enabled: true
+  info:
+    env:
+      enabled: true
+    git:
+      enabled: true
+
+# ─── Server ───
+server:
+  port: 8080
+  shutdown: graceful
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# ─── Logging ───
+logging:
+  level:
+    root: INFO
+    br.furb: DEBUG
+    io.awspring.cloud: INFO
+    org.springframework.data.mongodb: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# ─── Outbox Relay ───
+app:
+  viacep:
+    base-url: https://viacep.com.br/ws
+    timeout-ms: 5000
+    retry-max-attempts: 3
+    retry-backoff-ms: 1000
+  messaging:
+    inbound-queue: ${APP_MESSAGING_INBOUND_QUEUE:package-events-queue}
+    outbound-queue: ${APP_MESSAGING_OUTBOUND_QUEUE:logistics-events-queue}
+  outbox:
+    relay:
+      fixed-delay-ms: 2000
+      batch-size: 50
+      max-attempts: 5
+      retry-delay-ms: 5000
+      processing-timeout-ms: 60000

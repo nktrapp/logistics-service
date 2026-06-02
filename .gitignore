@@ -1,0 +1,41 @@
+# ─── Build ───
+build/
+out/
+bin/
+
+# ─── Gradle ───
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# ─── IDE ───
+.claude/
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+*.swp
+*.swo
+*~
+
+# ─── OS ───
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Environment ───
+.env
+.env.*
+!.env.example
+
+# ─── Logs ───
+*.log
+logs/
+
+# ─── Docker ───
+docker-compose.override.yml

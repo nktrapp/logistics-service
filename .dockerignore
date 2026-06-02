@@ -1,0 +1,11 @@
+.gradle
+build
+**/build
+*.md
+.git
+.gitignore
+.idea
+*.iml
+docker-compose*.yml
+terraform/
+.github/
