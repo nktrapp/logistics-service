@@ -95,6 +95,11 @@ public class RouteCalculationService {
 
             List<Edge> neighbors = adjacency.getOrDefault(current.hubId(), Collections.emptyList());
             for (Edge edge : neighbors) {
+                // Skip edges that point at a hub which is not part of the routable set
+                // (e.g. an inactive or removed hub still referenced by a connection).
+                if (!distances.containsKey(edge.destinationHubId())) {
+                    continue;
+                }
                 if (visited.contains(edge.destinationHubId())) {
                     continue;
                 }

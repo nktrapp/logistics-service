@@ -41,7 +41,7 @@ public class LogisticsEventListenerAdapter {
                     case "package.created" -> calculateRouteUseCase.execute(eventId, packageId,
                             requireText(payload, "senderCep"), requireText(payload, "recipientCep"));
                     case "package.destination.changed" -> recalculateRouteUseCase.execute(eventId, packageId,
-                            requireText(payload, "newCep"));
+                            requireText(payload, "senderCep"), requireText(payload, "newCep"));
                     default -> log.warn("[sqs-listener] Unknown event type: {}", eventType);
                 }
             } finally {

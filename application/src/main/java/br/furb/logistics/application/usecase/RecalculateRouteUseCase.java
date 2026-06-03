@@ -1,8 +1,10 @@
 package br.furb.logistics.application.usecase;
 
 import br.furb.logistics.application.service.RouteCalculationService;
+import br.furb.logistics.application.usecase.transaction.PersistFailedRouteUseCase;
 import br.furb.logistics.application.usecase.transaction.PersistRecalculatedRouteUseCase;
 import br.furb.logistics.domain.exception.CepValidationException;
+import br.furb.logistics.domain.exception.RouteCalculationException;
 import br.furb.logistics.domain.model.CepInfo;
 import br.furb.logistics.domain.model.Hub;
 import br.furb.logistics.domain.model.HubConnection;
@@ -36,8 +38,9 @@ public class RecalculateRouteUseCase {
     private final InboxRepositoryPort inboxRepository;
     private final RouteCalculationService routeCalculationService;
     private final PersistRecalculatedRouteUseCase persistRecalculatedRouteUseCase;
+    private final PersistFailedRouteUseCase persistFailedRouteUseCase;
 
-    public void execute(String eventId, String packageId, String newRecipientCep) {
+    public void execute(String eventId, String packageId, String senderCep, String newRecipientCep) {
         if (inboxRepository.existsByEventId(eventId)) {
             log.info("[recalculate-route] Event {} already processed, skipping", eventId);
             return;
@@ -45,45 +48,61 @@ public class RecalculateRouteUseCase {
 
         log.info("[recalculate-route] Recalculating route for package {} to new CEP {}", packageId, newRecipientCep);
 
-        // External lookups (ViaCEP) and the routing computation run OUTSIDE the write transaction.
-        Route existingRoute = routeRepository.findByPackageId(packageId).orElse(null);
+        try {
+            // External lookups (ViaCEP) and the routing computation run OUTSIDE the write transaction.
+            Route existingRoute = routeRepository.findByPackageId(packageId).orElse(null);
 
-        String originHubId = nonNull(existingRoute)
-                ? existingRoute.getOriginHubId()
-                : hubRepository.findAllActive().getFirst().getId();
+            CepInfo destinationCepInfo = cepLookupPort.findByCep(newRecipientCep)
+                    .orElseThrow(() -> new CepValidationException(newRecipientCep));
 
-        CepInfo destinationCepInfo = cepLookupPort.findByCep(newRecipientCep)
-                .orElseThrow(() -> new CepValidationException(newRecipientCep));
+            List<Hub> allHubs = hubRepository.findAllActive();
+            List<HubConnection> allConnections = hubConnectionRepository.findAll();
+            List<Hub> destinationHubs = getActiveCandidates(destinationCepInfo.getCity(), destinationCepInfo.getState(), allHubs);
 
-        List<Hub> allHubs = hubRepository.findAllActive();
-        List<HubConnection> allConnections = hubConnectionRepository.findAll();
-        Hub originHub = resolveOriginHub(originHubId, allHubs);
-        List<Hub> routingHubs = includeOriginHub(allHubs, originHub);
-        List<Hub> destinationHubs = getActiveCandidates(destinationCepInfo.getCity(), destinationCepInfo.getState(), allHubs);
+            // The sender did not change: when a route already exists, reuse its origin hub.
+            // Otherwise derive the origin from the sender CEP, exactly like the initial calculation
+            // (never fall back to an arbitrary hub).
+            List<Hub> originCandidates;
+            List<Hub> routingHubs;
+            if (nonNull(existingRoute)) {
+                Hub knownOriginHub = resolveOriginHub(existingRoute.getOriginHubId(), allHubs);
+                originCandidates = List.of(knownOriginHub);
+                routingHubs = includeOriginHub(allHubs, knownOriginHub);
+            } else {
+                CepInfo originCepInfo = cepLookupPort.findByCep(senderCep)
+                        .orElseThrow(() -> new CepValidationException(senderCep));
+                originCandidates = getActiveCandidates(originCepInfo.getCity(), originCepInfo.getState(), allHubs);
+                routingHubs = allHubs;
+            }
 
-        RouteCalculationService.SelectedRoute selectedRoute = routeCalculationService.selectBestRoute(
-                List.of(originHub),
-                destinationHubs,
-                routingHubs,
-                allConnections
-        );
-        Hub destinationHub = selectedRoute.destinationHub();
-        RouteCalculationService.RouteResult result = selectedRoute.routeResult();
+            RouteCalculationService.SelectedRoute selectedRoute = routeCalculationService.selectBestRoute(
+                    originCandidates,
+                    destinationHubs,
+                    routingHubs,
+                    allConnections
+            );
+            Hub originHub = selectedRoute.originHub();
+            Hub destinationHub = selectedRoute.destinationHub();
+            RouteCalculationService.RouteResult result = selectedRoute.routeResult();
 
-        Map<String, Hub> hubMap = routingHubs.stream().collect(Collectors.toMap(Hub::getId, h -> h));
-        List<Route.RouteHop> hops = buildHops(result.path(), hubMap);
+            Map<String, Hub> hubMap = routingHubs.stream().collect(Collectors.toMap(Hub::getId, h -> h));
+            List<Route.RouteHop> hops = buildHops(result.path(), hubMap);
 
-        Route route = buildRoute(existingRoute, packageId, originHubId, destinationHub.getId(), hops, result);
+            Route route = buildRoute(existingRoute, packageId, originHub.getId(), destinationHub.getId(), hops, result);
 
-        persistRecalculatedRouteUseCase.execute(
-                eventId,
-                packageId,
-                route,
-                originHub,
-                destinationHub,
-                hops,
-                result
-        );
+            persistRecalculatedRouteUseCase.execute(
+                    eventId,
+                    packageId,
+                    route,
+                    originHub,
+                    destinationHub,
+                    hops,
+                    result
+            );
+        } catch (RouteCalculationException | CepValidationException e) {
+            log.warn("[recalculate-route] Recalculation failed for package {}: {}", packageId, e.getMessage());
+            persistFailedRouteUseCase.execute(eventId, "package.destination.changed", packageId, e.getMessage());
+        }
     }
 
     private List<Route.RouteHop> buildHops(List<String> path, Map<String, Hub> hubMap) {

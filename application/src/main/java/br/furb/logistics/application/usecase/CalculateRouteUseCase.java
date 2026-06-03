@@ -4,7 +4,9 @@ import br.furb.logistics.application.dto.RouteResponse;
 import br.furb.logistics.application.mapper.RouteMapper;
 import br.furb.logistics.application.service.RouteCalculationService;
 import br.furb.logistics.application.usecase.transaction.PersistCalculatedRouteUseCase;
+import br.furb.logistics.application.usecase.transaction.PersistFailedRouteUseCase;
 import br.furb.logistics.domain.exception.CepValidationException;
+import br.furb.logistics.domain.exception.RouteCalculationException;
 import br.furb.logistics.domain.model.CepInfo;
 import br.furb.logistics.domain.model.Hub;
 import br.furb.logistics.domain.model.HubConnection;
@@ -38,6 +40,7 @@ public class CalculateRouteUseCase {
     private final InboxRepositoryPort inboxRepository;
     private final RouteCalculationService routeCalculationService;
     private final PersistCalculatedRouteUseCase persistCalculatedRouteUseCase;
+    private final PersistFailedRouteUseCase persistFailedRouteUseCase;
 
     public RouteResponse execute(String eventId, String packageId, String senderCep, String recipientCep) {
         if (inboxRepository.existsByEventId(eventId)) {
@@ -47,45 +50,54 @@ public class CalculateRouteUseCase {
 
         log.info("[calculate-route] Calculating route for package {} from {} to {}", packageId, senderCep, recipientCep);
 
-        // External lookups (ViaCEP) and the routing computation run OUTSIDE the write transaction.
-        CepInfo originCepInfo = cepLookupPort.findByCep(senderCep)
-                .orElseThrow(() -> new CepValidationException(senderCep));
+        try {
+            // External lookups (ViaCEP) and the routing computation run OUTSIDE the write transaction.
+            CepInfo originCepInfo = cepLookupPort.findByCep(senderCep)
+                    .orElseThrow(() -> new CepValidationException(senderCep));
 
-        CepInfo destinationCepInfo = cepLookupPort.findByCep(recipientCep)
-                .orElseThrow(() -> new CepValidationException(recipientCep));
+            CepInfo destinationCepInfo = cepLookupPort.findByCep(recipientCep)
+                    .orElseThrow(() -> new CepValidationException(recipientCep));
 
-        List<Hub> allHubs = hubRepository.findAllActive();
-        List<HubConnection> allConnections = hubConnectionRepository.findAll();
-        List<Hub> originHubs = getActiveCandidates(originCepInfo.getCity(), originCepInfo.getState(), allHubs);
-        List<Hub> destinationHubs = getActiveCandidates(destinationCepInfo.getCity(), destinationCepInfo.getState(), allHubs);
+            List<Hub> allHubs = hubRepository.findAllActive();
+            List<HubConnection> allConnections = hubConnectionRepository.findAll();
+            List<Hub> originHubs = getActiveCandidates(originCepInfo.getCity(), originCepInfo.getState(), allHubs);
+            List<Hub> destinationHubs = getActiveCandidates(destinationCepInfo.getCity(), destinationCepInfo.getState(), allHubs);
 
-        RouteCalculationService.SelectedRoute selectedRoute = routeCalculationService.selectBestRoute(
-                originHubs,
-                destinationHubs,
-                allHubs,
-                allConnections
-        );
-        Hub originHub = selectedRoute.originHub();
-        Hub destinationHub = selectedRoute.destinationHub();
-        RouteCalculationService.RouteResult result = selectedRoute.routeResult();
+            RouteCalculationService.SelectedRoute selectedRoute = routeCalculationService.selectBestRoute(
+                    originHubs,
+                    destinationHubs,
+                    allHubs,
+                    allConnections
+            );
+            Hub originHub = selectedRoute.originHub();
+            Hub destinationHub = selectedRoute.destinationHub();
+            RouteCalculationService.RouteResult result = selectedRoute.routeResult();
 
-        Map<String, Hub> hubMap = allHubs.stream().collect(Collectors.toMap(Hub::getId, h -> h));
-        List<Route.RouteHop> hops = buildHops(result.path(), hubMap);
+            Map<String, Hub> hubMap = allHubs.stream().collect(Collectors.toMap(Hub::getId, h -> h));
+            List<Route.RouteHop> hops = buildHops(result.path(), hubMap);
 
-        Route existingRoute = routeRepository.findByPackageId(packageId).orElse(null);
-        Route route = buildRoute(existingRoute, packageId, originHub.getId(), destinationHub.getId(), hops, result);
+            Route existingRoute = routeRepository.findByPackageId(packageId).orElse(null);
+            Route route = buildRoute(existingRoute, packageId, originHub.getId(), destinationHub.getId(), hops, result);
 
-        Route saved = persistCalculatedRouteUseCase.execute(
-                eventId,
-                packageId,
-                route,
-                originHub,
-                destinationHub,
-                hops,
-                result
-        );
+            Route saved = persistCalculatedRouteUseCase.execute(
+                    eventId,
+                    packageId,
+                    route,
+                    originHub,
+                    destinationHub,
+                    hops,
+                    result
+            );
 
-        return saved == null ? null : RouteMapper.INSTANCE.toResponse(saved);
+            return saved == null ? null : RouteMapper.INSTANCE.toResponse(saved);
+        } catch (RouteCalculationException | CepValidationException e) {
+            // Permanent failure (no reachable/eligible hubs or an invalid CEP): notify the package
+            // service via route.failed and acknowledge the message instead of retrying to the DLQ.
+            // Transient failures (e.g. ViaCEP unavailable) surface as other exceptions and still retry.
+            log.warn("[calculate-route] Routing failed for package {}: {}", packageId, e.getMessage());
+            persistFailedRouteUseCase.execute(eventId, "package.created", packageId, e.getMessage());
+            return null;
+        }
     }
 
     private List<Route.RouteHop> buildHops(List<String> path, Map<String, Hub> hubMap) {

@@ -1,6 +1,7 @@
 package br.furb.logistics.application.usecase;
 
 import br.furb.logistics.application.service.RouteCalculationService;
+import br.furb.logistics.application.usecase.transaction.PersistFailedRouteUseCase;
 import br.furb.logistics.application.usecase.transaction.PersistRecalculatedRouteUseCase;
 import br.furb.logistics.domain.model.CepInfo;
 import br.furb.logistics.domain.model.Hub;
@@ -53,6 +54,9 @@ class RecalculateRouteUseCaseTest {
     @Mock
     PersistRecalculatedRouteUseCase persistRecalculatedRouteUseCase;
 
+    @Mock
+    PersistFailedRouteUseCase persistFailedRouteUseCase;
+
     @Test
     @DisplayName("Given an existing route, should preserve route identity when recalculating destination")
     void shouldPreserveRouteIdentityWhenRecalculatingDestination() {
@@ -64,7 +68,8 @@ class RecalculateRouteUseCaseTest {
                 cepLookupPort,
                 inboxRepository,
                 routeCalculationService,
-                persistRecalculatedRouteUseCase
+                persistRecalculatedRouteUseCase,
+                persistFailedRouteUseCase
         );
 
         Instant createdAt = Instant.parse("2026-05-31T10:00:00Z");
@@ -104,7 +109,7 @@ class RecalculateRouteUseCaseTest {
                 eq(List.of())
         )).thenReturn(new RouteCalculationService.SelectedRoute(originHub, destinationHub, routeResult));
         // WHEN
-        useCase.execute("event-1", "pkg-1", "89200000");
+        useCase.execute("event-1", "pkg-1", "89010000", "89200000");
 
         // THEN
         ArgumentCaptor<Route> routeCaptor = ArgumentCaptor.forClass(Route.class);

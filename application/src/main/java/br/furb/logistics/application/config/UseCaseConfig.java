@@ -9,6 +9,7 @@ import br.furb.logistics.application.usecase.RecalculateRouteUseCase;
 import br.furb.logistics.application.usecase.RegisterHubConnectionUseCase;
 import br.furb.logistics.application.usecase.RegisterHubUseCase;
 import br.furb.logistics.application.usecase.transaction.PersistCalculatedRouteUseCase;
+import br.furb.logistics.application.usecase.transaction.PersistFailedRouteUseCase;
 import br.furb.logistics.application.usecase.transaction.PersistRecalculatedRouteUseCase;
 import br.furb.logistics.domain.port.CepLookupPort;
 import br.furb.logistics.domain.port.HubConnectionRepositoryPort;
@@ -46,9 +47,11 @@ public class UseCaseConfig {
                                                        CepLookupPort cepLookupPort,
                                                        InboxRepositoryPort inboxRepository,
                                                        RouteCalculationService routeCalculationService,
-                                                       PersistCalculatedRouteUseCase persistCalculatedRouteUseCase) {
+                                                       PersistCalculatedRouteUseCase persistCalculatedRouteUseCase,
+                                                       PersistFailedRouteUseCase persistFailedRouteUseCase) {
         return new CalculateRouteUseCase(routeRepository, hubRepository, hubConnectionRepository,
-                cepLookupPort, inboxRepository, routeCalculationService, persistCalculatedRouteUseCase);
+                cepLookupPort, inboxRepository, routeCalculationService, persistCalculatedRouteUseCase,
+                persistFailedRouteUseCase);
     }
 
     @Bean
@@ -58,9 +61,11 @@ public class UseCaseConfig {
                                                            CepLookupPort cepLookupPort,
                                                            InboxRepositoryPort inboxRepository,
                                                            RouteCalculationService routeCalculationService,
-                                                           PersistRecalculatedRouteUseCase persistRecalculatedRouteUseCase) {
+                                                           PersistRecalculatedRouteUseCase persistRecalculatedRouteUseCase,
+                                                           PersistFailedRouteUseCase persistFailedRouteUseCase) {
         return new RecalculateRouteUseCase(routeRepository, hubRepository, hubConnectionRepository,
-                cepLookupPort, inboxRepository, routeCalculationService, persistRecalculatedRouteUseCase);
+                cepLookupPort, inboxRepository, routeCalculationService, persistRecalculatedRouteUseCase,
+                persistFailedRouteUseCase);
     }
 
     @Bean
@@ -75,6 +80,12 @@ public class UseCaseConfig {
                                                                            OutboxRepositoryPort outboxRepository,
                                                                            InboxRepositoryPort inboxRepository) {
         return new PersistRecalculatedRouteUseCase(routeRepository, outboxRepository, inboxRepository);
+    }
+
+    @Bean
+    public PersistFailedRouteUseCase persistFailedRouteUseCase(OutboxRepositoryPort outboxRepository,
+                                                               InboxRepositoryPort inboxRepository) {
+        return new PersistFailedRouteUseCase(outboxRepository, inboxRepository);
     }
 
     @Bean
