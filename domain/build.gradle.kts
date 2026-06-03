@@ -1,3 +1,0 @@
-dependencies {
-    implementation("jakarta.validation:jakarta.validation-api:3.1.1")
-}

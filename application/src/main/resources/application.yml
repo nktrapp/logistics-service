@@ -47,7 +47,7 @@ server:
 logging:
   level:
     root: INFO
-    br.furb: DEBUG
+    br.furb: INFO
     io.awspring.cloud: INFO
     org.springframework.data.mongodb: WARN
   pattern:

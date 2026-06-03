@@ -31,5 +31,6 @@ app:
 
 logging:
   level:
-    root: DEBUG
+    root: INFO
+    br.furb: DEBUG
     io.awspring.cloud: DEBUG

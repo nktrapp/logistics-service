@@ -5,10 +5,10 @@ WORKDIR /workspace
 
 # Copy build configuration first for dependency caching
 COPY gradle/ gradle/
-COPY gradlew build.gradle.kts settings.gradle.kts gradle.properties ./
-COPY domain/build.gradle.kts domain/
-COPY infrastructure/build.gradle.kts infrastructure/
-COPY application/build.gradle.kts application/
+COPY gradlew build.gradle settings.gradle gradle.properties ./
+COPY domain/build.gradle domain/
+COPY infrastructure/build.gradle infrastructure/
+COPY application/build.gradle application/
 
 RUN chmod +x gradlew && ./gradlew dependencies --no-daemon || true
 

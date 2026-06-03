@@ -1,0 +1,10 @@
+pluginManagement {
+    plugins {
+        id 'org.springframework.boot' version "${springBootVersion}"
+        id 'io.spring.dependency-management' version "${springDependencyManagementVersion}"
+    }
+}
+
+rootProject.name = 'logistics-service'
+
+include 'domain', 'infrastructure', 'application'
