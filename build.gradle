@@ -21,7 +21,7 @@ sonar {
         property 'sonar.host.url', System.getenv('SONAR_HOST_URL') ?: 'https://sonarcloud.io'
         property 'sonar.projectKey', System.getenv('SONAR_PROJECT_KEY') ?: ''
         property 'sonar.organization', System.getenv('SONAR_ORGANIZATION') ?: ''
-        // The sonar-gradle plugin auto-discovers each module's JaCoCo XML report.
+        property 'sonar.token', System.getenv('SONAR_TOKEN') ?: ''
     }
 }
 
