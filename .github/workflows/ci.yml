@@ -47,7 +47,7 @@ jobs:
 
       - name: JaCoCo coverage comment (PR status)
         if: github.event_name == 'pull_request'
-        uses: madrapse/jacoco-report@v1.7.1
+        uses: Madrapps/jacoco-report@v1.7.1
         with:
           paths: "**/build/reports/jacoco/test/jacocoTestReport.xml"
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Trivy filesystem scan (dependencies & config)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
           scan-ref: .

@@ -7,6 +7,8 @@ spring:
       write-dates-as-timestamps: false
     deserialization:
       fail-on-unknown-properties: false
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
 # ─── Management / Actuator ───
 management:
@@ -37,7 +39,7 @@ management:
 
 # ─── Server ───
 server:
-  port: 8080
+  port: 8082
   shutdown: graceful
   error:
     include-message: always
