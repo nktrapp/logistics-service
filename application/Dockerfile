@@ -1,4 +1,3 @@
-# ─── Stage 1: Build ───
 FROM eclipse-temurin:25-jdk-alpine AS builder
 
 WORKDIR /workspace
@@ -12,14 +11,12 @@ COPY application/build.gradle application/
 
 RUN chmod +x gradlew && ./gradlew dependencies --no-daemon || true
 
-# Copy source code
 COPY domain/ domain/
 COPY infrastructure/ infrastructure/
 COPY application/ application/
 
 RUN ./gradlew :application:bootJar -x test --no-daemon
 
-# ─── Stage 2: Runtime ───
 FROM eclipse-temurin:25-jre-alpine
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup

@@ -9,7 +9,6 @@ spring:
       port: 6379
       password: ""
 
-# ─── AWS / SQS (MiniStack) ───
 spring.cloud.aws:
   region:
     static: us-east-1
@@ -20,7 +19,6 @@ spring.cloud.aws:
   sqs:
     endpoint: http://localhost:4566
 
-# ─── ViaCEP ───
 app:
   viacep:
     base-url: https://viacep.com.br/ws

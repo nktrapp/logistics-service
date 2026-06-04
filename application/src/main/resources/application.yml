@@ -11,7 +11,6 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
 
-# ─── Management / Actuator ───
 management:
   endpoints:
     web:
@@ -38,7 +37,6 @@ management:
     git:
       enabled: true
 
-# ─── Server ───
 server:
   port: 8082
   shutdown: graceful
@@ -46,7 +44,6 @@ server:
     include-message: always
     include-binding-errors: always
 
-# ─── Logging ───
 logging:
   level:
     root: INFO
@@ -56,7 +53,6 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
-# ─── Outbox Relay ───
 app:
   viacep:
     base-url: https://viacep.com.br/ws

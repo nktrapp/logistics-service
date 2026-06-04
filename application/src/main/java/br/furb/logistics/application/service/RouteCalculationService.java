@@ -136,7 +136,6 @@ public class RouteCalculationService {
             adjacency.computeIfAbsent(conn.getOriginHubId(), k -> new ArrayList<>())
                     .add(new Edge(conn.getDestinationHubId(), distance, transitTime));
 
-            // Bidirecional
             adjacency.computeIfAbsent(conn.getDestinationHubId(), k -> new ArrayList<>())
                     .add(new Edge(conn.getOriginHubId(), distance, transitTime));
         }

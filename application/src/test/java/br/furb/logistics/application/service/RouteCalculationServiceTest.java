@@ -25,7 +25,6 @@ class RouteCalculationServiceTest {
         @Test
         @DisplayName("Given multiple candidate pairs, should select the shortest reachable route")
         void shouldSelectShortestReachableRouteWhenMultipleCandidatesAreAvailable() {
-            // GIVEN
             Hub originOne = buildHub("origin-1", "Origin One");
             Hub originTwo = buildHub("origin-2", "Origin Two");
             Hub destinationOne = buildHub("destination-1", "Destination One");
@@ -37,7 +36,6 @@ class RouteCalculationServiceTest {
                     buildConnection("origin-1", "destination-2", 20, 4)
             );
 
-            // WHEN
             RouteCalculationService.SelectedRoute selectedRoute = routeCalculationService.selectBestRoute(
                     List.of(originOne, originTwo),
                     List.of(destinationOne, destinationTwo),
@@ -45,7 +43,6 @@ class RouteCalculationServiceTest {
                     connections
             );
 
-            // THEN
             assertThat(selectedRoute.originHub().getId()).isEqualTo("origin-2");
             assertThat(selectedRoute.destinationHub().getId()).isEqualTo("destination-1");
             assertThat(selectedRoute.routeResult().totalDistanceKm()).isEqualTo(5.0);
@@ -55,7 +52,6 @@ class RouteCalculationServiceTest {
         @Test
         @DisplayName("Given tied route metrics, should choose the deterministic lexicographic candidate")
         void shouldChooseDeterministicCandidateWhenRouteMetricsTie() {
-            // GIVEN
             Hub alphaOrigin = buildHub("origin-a", "Alpha Origin");
             Hub betaOrigin = buildHub("origin-b", "Beta Origin");
             Hub destination = buildHub("destination-1", "Destination");
@@ -65,7 +61,6 @@ class RouteCalculationServiceTest {
                     buildConnection("origin-b", "destination-1", 10, 2)
             );
 
-            // WHEN
             RouteCalculationService.SelectedRoute selectedRoute = routeCalculationService.selectBestRoute(
                     List.of(betaOrigin, alphaOrigin),
                     List.of(destination),
@@ -73,7 +68,6 @@ class RouteCalculationServiceTest {
                     connections
             );
 
-            // THEN
             assertThat(selectedRoute.originHub().getId()).isEqualTo("origin-a");
             assertThat(selectedRoute.routeResult().totalDistanceKm()).isEqualTo(10.0);
         }
@@ -81,11 +75,9 @@ class RouteCalculationServiceTest {
         @Test
         @DisplayName("Given unreachable candidates, should throw exception when no route can be selected")
         void shouldThrowExceptionWhenNoCandidateRouteIsReachable() {
-            // GIVEN
             Hub origin = buildHub("origin-1", "Origin");
             Hub destination = buildHub("destination-1", "Destination");
 
-            // WHEN / THEN
             assertThatThrownBy(() -> routeCalculationService.selectBestRoute(
                     List.of(origin),
                     List.of(destination),

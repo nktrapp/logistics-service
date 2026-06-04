@@ -61,7 +61,6 @@ services:
     command:
       - -c
       - |
-        # Dead Letter Queues (FIFO)
         aws --endpoint-url=http://ministack:4566 sqs create-queue --queue-name package-events-dlq.fifo --attributes FifoQueue=true
         aws --endpoint-url=http://ministack:4566 sqs create-queue --queue-name logistics-events-dlq.fifo --attributes FifoQueue=true
 

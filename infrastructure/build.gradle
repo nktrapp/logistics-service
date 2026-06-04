@@ -13,24 +13,20 @@ dependencyManagement {
 dependencies {
     implementation project(':domain')
 
-    // Spring
     implementation libs.spring.boot.starter.data.mongodb
     implementation libs.spring.boot.starter.data.redis
     implementation libs.spring.boot.starter.webmvc
     implementation libs.spring.boot.starter.validation
 
-    // AWS SQS
     implementation libs.spring.cloud.aws.starter.sqs
 
     // Jackson (3.x — java.time support is built into databind, no separate jsr310 module)
     implementation libs.jackson.databind
 
-    // MapStruct
     implementation libs.mapstruct
     annotationProcessor libs.mapstruct.processor
     annotationProcessor libs.lombok.mapstruct.binding
 
-    // Testes
     testImplementation libs.spring.boot.starter.test
     testImplementation libs.testcontainers.mongodb
     testImplementation libs.testcontainers.junit.jupiter

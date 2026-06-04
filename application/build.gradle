@@ -27,7 +27,6 @@ dependencies {
     annotationProcessor libs.mapstruct.processor
     annotationProcessor libs.lombok.mapstruct.binding
 
-    // Testes
     testImplementation libs.spring.boot.starter.test
     testImplementation libs.testcontainers.mongodb
     testImplementation libs.testcontainers.junit.jupiter
@@ -37,7 +36,6 @@ tasks.named('bootJar') {
     archiveFileName = "${project.parent?.name}.jar"
 }
 
-// ─── Jib — build/push the OCI image with no Docker daemon and no Dockerfile ───
 // Defaults are local-friendly; CI overrides the target with -Djib.to.image / -Djib.to.tags.
 jib {
     from {

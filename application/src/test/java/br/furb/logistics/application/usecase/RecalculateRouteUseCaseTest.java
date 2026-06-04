@@ -60,7 +60,6 @@ class RecalculateRouteUseCaseTest {
     @Test
     @DisplayName("Given an existing route, should preserve route identity when recalculating destination")
     void shouldPreserveRouteIdentityWhenRecalculatingDestination() {
-        // GIVEN
         RecalculateRouteUseCase useCase = new RecalculateRouteUseCase(
                 routeRepository,
                 hubRepository,
@@ -108,10 +107,8 @@ class RecalculateRouteUseCaseTest {
                 eq(List.of(originHub, destinationHub)),
                 eq(List.of())
         )).thenReturn(new RouteCalculationService.SelectedRoute(originHub, destinationHub, routeResult));
-        // WHEN
         useCase.execute("event-1", "pkg-1", "89010000", "89200000");
 
-        // THEN
         ArgumentCaptor<Route> routeCaptor = ArgumentCaptor.forClass(Route.class);
         verify(persistRecalculatedRouteUseCase).execute(
                 eq("event-1"),

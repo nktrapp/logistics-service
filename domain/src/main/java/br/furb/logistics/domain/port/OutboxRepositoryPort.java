@@ -15,7 +15,6 @@ public interface OutboxRepositoryPort {
 
     RetryOutcome markForRetry(String eventId, String errorMessage, Instant nextAttemptAt, int maxAttempts);
 
-    /** Removes already-published events older than the threshold. Returns the number of deleted entries. */
     long deletePublishedBefore(Instant threshold);
 
     /** Counts events that exhausted all publish retries (status FAILED) and require manual replay. */
