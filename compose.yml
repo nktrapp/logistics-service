@@ -91,7 +91,7 @@ services:
       - "8082:8080"
     environment:
       SPRING_PROFILES_ACTIVE: local
-      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/logistics_db?directConnection=true
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/logistics_db?directConnection=true
       SPRING_DATA_REDIS_HOST: redis
       SPRING_CLOUD_AWS_ENDPOINT: http://ministack:4566
       SPRING_CLOUD_AWS_SQS_ENDPOINT: http://ministack:4566

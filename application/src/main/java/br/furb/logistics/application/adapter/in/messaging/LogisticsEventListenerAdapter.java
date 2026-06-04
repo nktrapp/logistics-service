@@ -2,8 +2,8 @@ package br.furb.logistics.application.adapter.in.messaging;
 
 import br.furb.logistics.application.usecase.CalculateRouteUseCase;
 import br.furb.logistics.application.usecase.RecalculateRouteUseCase;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,7 +1,7 @@
 plugins {
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
-    id 'com.google.cloud.tools.jib' version '3.4.4'
+    id 'com.google.cloud.tools.jib' version '3.5.3'
 }
 
 dependencyManagement {
@@ -17,11 +17,11 @@ dependencies {
     implementation 'jakarta.validation:jakarta.validation-api'
     implementation 'org.slf4j:slf4j-api'
     implementation 'org.springframework:spring-tx'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'tools.jackson.core:jackson-databind'
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"
 
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
@@ -29,8 +29,8 @@ dependencies {
 
     // Testes
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation "org.testcontainers:mongodb:${testcontainersVersion}"
-    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    testImplementation "org.testcontainers:testcontainers-mongodb:${testcontainersVersion}"
+    testImplementation "org.testcontainers:testcontainers-junit-jupiter:${testcontainersVersion}"
 }
 
 tasks.named('bootJar') {

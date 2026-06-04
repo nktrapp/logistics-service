@@ -16,15 +16,14 @@ dependencies {
     // Spring
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     // AWS SQS
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
 
-    // Jackson
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    // Jackson (3.x — java.time support is built into databind, no separate jsr310 module)
+    implementation 'tools.jackson.core:jackson-databind'
 
     // MapStruct
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"
@@ -33,6 +32,6 @@ dependencies {
 
     // Testes
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation "org.testcontainers:mongodb:${testcontainersVersion}"
-    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    testImplementation "org.testcontainers:testcontainers-mongodb:${testcontainersVersion}"
+    testImplementation "org.testcontainers:testcontainers-junit-jupiter:${testcontainersVersion}"
 }

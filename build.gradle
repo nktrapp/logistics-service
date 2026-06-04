@@ -3,7 +3,7 @@ plugins {
     id 'org.springframework.boot' apply false
     id 'io.spring.dependency-management' apply false
     id 'jacoco'
-    id 'org.sonarqube' version '7.3.0.8198'
+    id 'org.sonarqube' version '7.3.1.8318'
 }
 
 allprojects {
@@ -28,6 +28,10 @@ sonar {
 subprojects {
     apply plugin: 'java'
     apply plugin: 'jacoco'
+
+    // Override the Testcontainers version managed by the Spring Boot BOM.
+    // 2.x is required for Docker Engine 29+ (older docker-java defaults to API 1.32, rejected by the engine).
+    ext['testcontainers.version'] = testcontainersVersion
 
     java {
         toolchain {

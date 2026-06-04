@@ -3,8 +3,9 @@ spring:
     name: logistics-service
   jackson:
     default-property-inclusion: non_null
-    serialization:
-      write-dates-as-timestamps: false
+    datatype:
+      datetime:
+        write-dates-as-timestamps: false
     deserialization:
       fail-on-unknown-properties: false
   profiles:
@@ -27,7 +28,7 @@ management:
     tags:
       application: ${spring.application.name}
   health:
-    mongo:
+    mongodb:
       enabled: true
     redis:
       enabled: true

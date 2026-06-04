@@ -4,8 +4,8 @@ import br.furb.logistics.domain.event.DomainEvent;
 import br.furb.logistics.domain.port.OutboxRepositoryPort;
 import br.furb.logistics.infrastructure.adapter.out.persistence.document.OutboxDocument;
 import br.furb.logistics.infrastructure.adapter.out.persistence.repository.mongo.OutboxMongoRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
@@ -55,7 +55,7 @@ public class MongoOutboxRepositoryAdapter implements OutboxRepositoryPort {
                     .build();
 
             mongoRepository.save(document);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new RuntimeException("Failed to serialize event payload", e);
         }
     }
