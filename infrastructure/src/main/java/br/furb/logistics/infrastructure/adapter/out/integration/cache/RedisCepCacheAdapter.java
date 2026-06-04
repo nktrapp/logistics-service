@@ -1,7 +1,6 @@
 package br.furb.logistics.infrastructure.adapter.out.integration.cache;
 
 import br.furb.logistics.domain.model.CepInfo;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +41,7 @@ public class RedisCepCacheAdapter {
         try {
             String json = objectMapper.writeValueAsString(cepInfo);
             redisTemplate.opsForValue().set(KEY_PREFIX + cep, json, Duration.ofHours(ttlHours));
-        } catch (JacksonException e) {
+        } catch (Exception e) {
             log.warn("[redis-cache] Error writing cache for CEP {}", cep, e);
         }
     }
