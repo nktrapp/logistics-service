@@ -58,7 +58,7 @@ jobs:
           min-coverage-overall: 0
           min-coverage-changed-files: 0
 
-      - name: SonarQube analysis (skipped until SONAR_TOKEN is set)
+      - name: SonarQube analysis
         if: ${{ env.SONAR_TOKEN != '' }}
         run: ./gradlew sonar --no-daemon
         env:
