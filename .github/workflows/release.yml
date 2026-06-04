@@ -10,7 +10,7 @@ permissions:
   contents: write # tags, CHANGELOG commit, GitHub release
   issues: write
   pull-requests: write
-  packages: write # push image to GHCR
+  id-token: write # OIDC token used to assume the AWS role for the ECR push
 
 concurrency:
   group: release
@@ -60,13 +60,21 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Log in to GitHub Container Registry (for Jib push)
+      - name: Configure AWS credentials (OIDC)
         if: ${{ env.SKIP_RELEASE != 'true' }}
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Compute lowercase image name
+      - name: Log in to Amazon ECR (for Jib push)
         if: ${{ env.SKIP_RELEASE != 'true' }}
-        run: echo "IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Compute ECR image name
+        if: ${{ env.SKIP_RELEASE != 'true' }}
+        run: echo "IMAGE=${{ steps.ecr.outputs.registry }}/furb-logistics/logistics-service" >> "$GITHUB_ENV"
 
       - name: Semantic Release (version, changelog, tag, GitHub release, Jib image)
         if: ${{ env.SKIP_RELEASE != 'true' }}
