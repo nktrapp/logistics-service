@@ -60,10 +60,10 @@ resource "aws_ecs_task_definition" "logistics_service" {
       { name = "AWS_REGION", value = var.aws_region },
       { name = "REDIS_HOST", value = aws_elasticache_cluster.main.cache_nodes[0].address },
       { name = "REDIS_PORT", value = "6379" },
-      { name = "APP_MESSAGING_INBOUND_QUEUE", value = "${var.project_name}-package-events-queue.fifo" },
-      { name = "APP_MESSAGING_OUTBOUND_QUEUE", value = "${var.project_name}-logistics-events-queue.fifo" },
-      { name = "APP_MESSAGING_INBOUND_QUEUE_URL", value = data.aws_sqs_queue.package_events.url },
-      { name = "APP_MESSAGING_OUTBOUND_QUEUE_URL", value = aws_sqs_queue.logistics_events.url },
+      { name = "APP_MESSAGING_INBOUND_QUEUE", value = local.package_events_queue_name },
+      { name = "APP_MESSAGING_OUTBOUND_QUEUE", value = local.logistics_events_queue_name },
+      { name = "APP_MESSAGING_INBOUND_QUEUE_URL", value = local.package_events_queue_url },
+      { name = "APP_MESSAGING_OUTBOUND_QUEUE_URL", value = local.logistics_events_queue_url },
     ]
     secrets = [
       { name = "MONGODB_URI", valueFrom = "${aws_secretsmanager_secret.mongodb.arn}:logistics_uri::" },
