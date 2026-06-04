@@ -1,0 +1,97 @@
+###############################################################################
+# logistics-service — testes HTTP
+# Porta local: 8082. Execute as requisições de cima para baixo.
+# Observação: no perfil "local" o HubDataSeeder já cria um grafo padrão de hubs.
+###############################################################################
+@host = http://localhost:8082
+
+### [Health] Serviço no ar
+GET {{host}}/management/health
+
+# ────────────────────────────── HUBS ──────────────────────────────
+
+### [Feliz] Listar hubs (mostra os criados pelo seeder)
+GET {{host}}/api/v1/hubs
+
+### [Feliz] Registrar um novo hub (cidade/estado vêm do ViaCEP)
+# @name registrarHub
+POST {{host}}/api/v1/hubs
+Content-Type: application/json
+
+{
+  "name": "Hub Itajaí",
+  "cep": "88301000"
+}
+
+> {% client.global.set("hubItajaiId", response.body.id); %}
+
+### [Feliz] Buscar hub por id
+GET {{host}}/api/v1/hubs/{{hubItajaiId}}
+
+# ──────────────────────── CONEXÕES (arestas) ────────────────────────
+
+### Cria dois hubs próprios para demonstrar a conexão
+# @name hubA
+POST {{host}}/api/v1/hubs
+Content-Type: application/json
+
+{ "name": "Hub Origem Teste", "cep": "89010000" }
+
+> {% client.global.set("hubAId", response.body.id); %}
+
+# @name hubB
+POST {{host}}/api/v1/hubs
+Content-Type: application/json
+
+{ "name": "Hub Destino Teste", "cep": "89201000" }
+
+> {% client.global.set("hubBId", response.body.id); %}
+
+### [Feliz] Registrar conexão (bidirecional — basta uma vez)
+POST {{host}}/api/v1/hubs/connections
+Content-Type: application/json
+
+{
+  "originHubId": "{{hubAId}}",
+  "destinationHubId": "{{hubBId}}",
+  "distanceKm": 95.0,
+  "transitTimeHours": 2
+}
+
+# ───────────────────────────── ROTAS ─────────────────────────────
+
+### [Feliz] Consultar rota por packageId
+# (preencha o id de um pacote já roteado pelo package-service)
+GET {{host}}/api/v1/routes?packageId=COLE_O_PACKAGE_ID_AQUI
+
+### [Feliz] Consultar rota por id
+GET {{host}}/api/v1/routes/COLE_O_ROUTE_ID_AQUI
+
+# ─────────────────── FALHAS CONHECIDAS (tratadas) ───────────────────
+
+### [Falha 400] Nome curto (< 3) e CEP inválido
+POST {{host}}/api/v1/hubs
+Content-Type: application/json
+
+{ "name": "X", "cep": "abc" }
+
+### [Falha 400] Conexão com distância negativa
+POST {{host}}/api/v1/hubs/connections
+Content-Type: application/json
+
+{ "originHubId": "{{hubAId}}", "destinationHubId": "{{hubBId}}", "distanceKm": -5, "transitTimeHours": 2 }
+
+### [Falha 404] Conexão referenciando hub inexistente
+POST {{host}}/api/v1/hubs/connections
+Content-Type: application/json
+
+{ "originHubId": "hub-que-nao-existe", "destinationHubId": "{{hubBId}}", "distanceKm": 10, "transitTimeHours": 1 }
+
+### [Falha 400] Consulta de rota sem o parâmetro obrigatório packageId
+GET {{host}}/api/v1/routes
+
+### [Falha 404] Rota de pacote inexistente
+GET {{host}}/api/v1/routes?packageId=pacote-inexistente
+
+### [Falha 404] Hub inexistente
+GET {{host}}/api/v1/hubs/hub-inexistente
