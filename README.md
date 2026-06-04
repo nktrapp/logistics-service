@@ -166,4 +166,3 @@ docker compose up -d --build
 
 Testes HTTP prontos em [`http/logistics.http`](http/logistics.http). Guia de validação
 manual ponta a ponta em [`../VALIDATION.md`](../VALIDATION.md).
-
