@@ -12,7 +12,7 @@
       "@semantic-release/exec",
       {
         "prepareCmd": "sed -i 's/^version=.*/version=${nextRelease.version}/' gradle.properties",
-        "publishCmd": "./gradlew :application:jib -Djib.to.image=${env.IMAGE} -Djib.to.tags=${nextRelease.version},latest --no-daemon"
+        "publishCmd": "./gradlew :application:jib -Djib.to.image=${IMAGE} -Djib.to.tags=${nextRelease.version},latest --no-daemon"
       }
     ],
     [
