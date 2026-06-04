@@ -1,3 +1,11 @@
+## [1.1.2](https://github.com/nktrapp/logistics-service/compare/v1.1.1...v1.1.2) (2026-06-04)
+
+
+### Bug Fixes
+
+* Merge branch 'main' of https://github.com/nktrapp/logistics-service ([2625f48](https://github.com/nktrapp/logistics-service/commit/2625f481bf5249608a8772a6330b27ce6a61a5aa))
+* release script ([e466552](https://github.com/nktrapp/logistics-service/commit/e46655215cd19769b6373075bb14b6505171f1a7))
+
 ## [1.1.1](https://github.com/nktrapp/logistics-service/compare/v1.1.0...v1.1.1) (2026-06-04)
 
 
