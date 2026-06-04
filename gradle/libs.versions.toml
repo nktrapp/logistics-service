@@ -1,0 +1,58 @@
+[versions]
+springBoot = "4.0.6"
+springDependencyManagement = "1.1.7"
+springCloudAws = "4.0.2"
+junit = "6.1.0"
+testcontainers = "2.0.5"
+mockito = "5.23.0"
+byteBuddy = "1.18.10"
+assertj = "3.27.7"
+lombok = "1.18.46"
+lombokMapstructBinding = "0.2.0"
+mapstruct = "1.6.3"
+jakartaValidation = "3.1.1"
+jib = "3.5.3"
+sonarqube = "7.3.1.8318"
+
+[libraries]
+# Spring Boot starters (versions managed by the Spring Boot BOM)
+spring-boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-starter-webmvc" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-data-mongodb = { module = "org.springframework.boot:spring-boot-starter-data-mongodb" }
+spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-tx = { module = "org.springframework:spring-tx" }
+slf4j-api = { module = "org.slf4j:slf4j-api" }
+
+# AWS (BOM + starters)
+spring-cloud-aws-dependencies = { module = "io.awspring.cloud:spring-cloud-aws-dependencies", version.ref = "springCloudAws" }
+spring-cloud-aws-starter-sqs = { module = "io.awspring.cloud:spring-cloud-aws-starter-sqs" }
+
+# Jackson 3 (java.time built into databind)
+jackson-databind = { module = "tools.jackson.core:jackson-databind" }
+
+# Validation / mapping / lombok
+jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api", version.ref = "jakartaValidation" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+lombok-mapstruct-binding = { module = "org.projectlombok:lombok-mapstruct-binding", version.ref = "lombokMapstructBinding" }
+
+# Test
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
+bytebuddy = { module = "net.bytebuddy:byte-buddy", version.ref = "byteBuddy" }
+bytebuddy-agent = { module = "net.bytebuddy:byte-buddy-agent", version.ref = "byteBuddy" }
+testcontainers-mongodb = { module = "org.testcontainers:testcontainers-mongodb", version.ref = "testcontainers" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" }
+jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
