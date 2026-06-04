@@ -37,31 +37,37 @@ variable "docdb_master_password" {
 variable "docdb_instance_count" {
   description = "Number of DocumentDB cluster instances (writer + replicas)"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "desired_count" {
   description = "Desired number of ECS tasks for the service"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "min_capacity" {
   description = "Minimum number of tasks for autoscaling"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "max_capacity" {
   description = "Maximum number of tasks for autoscaling"
   type        = number
-  default     = 6
+  default     = 1
 }
 
 variable "cpu_target_value" {
   description = "Target average CPU utilization (percent) for autoscaling"
   type        = number
   default     = 60
+}
+
+variable "create_cloudwatch_alarms" {
+  description = "Create CloudWatch alarms and SNS topic for this service."
+  type        = bool
+  default     = false
 }
 
 variable "terraform_state_bucket" {

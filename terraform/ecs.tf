@@ -1,7 +1,7 @@
 # ─── CloudWatch Log Group ───
 resource "aws_cloudwatch_log_group" "logistics_service" {
   name              = "/ecs/${var.project_name}/logistics-service"
-  retention_in_days = 30
+  retention_in_days = 1
 }
 
 # ─── Target Group ───
@@ -10,7 +10,7 @@ resource "aws_lb_target_group" "logistics_service" {
   port        = 8080
   protocol    = "HTTP"
   vpc_id      = local.vpc_id
-  target_type = "ip"
+  target_type = "instance"
 
   health_check {
     path                = "/management/health/liveness"
@@ -41,22 +41,27 @@ resource "aws_lb_listener_rule" "logistics_service" {
 # ─── Task Definition ───
 resource "aws_ecs_task_definition" "logistics_service" {
   family                   = "${var.project_name}-logistics-service"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = "512"
-  memory                   = "1024"
+  network_mode             = "bridge"
+  requires_compatibilities = ["EC2"]
+  cpu                      = "256"
+  memory                   = "384"
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([{
-    name  = "logistics-service"
-    image = var.service_image
+    name              = "logistics-service"
+    image             = var.service_image
+    cpu               = 256
+    memory            = 384
+    memoryReservation = 256
     portMappings = [{
       containerPort = 8080
+      hostPort      = 0
       protocol      = "tcp"
     }]
     environment = [
       { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
+      { name = "JAVA_TOOL_OPTIONS", value = "-XX:InitialRAMPercentage=20 -XX:MaxRAMPercentage=70" },
       { name = "AWS_REGION", value = var.aws_region },
       { name = "REDIS_HOST", value = aws_elasticache_cluster.main.cache_nodes[0].address },
       { name = "REDIS_PORT", value = "6379" },
@@ -92,12 +97,10 @@ resource "aws_ecs_service" "logistics_service" {
   cluster         = local.ecs_cluster_id
   task_definition = aws_ecs_task_definition.logistics_service.arn
   desired_count   = var.desired_count
-  launch_type     = "FARGATE"
 
-  network_configuration {
-    subnets          = local.private_subnet_ids
-    security_groups  = [local.ecs_security_group_id]
-    assign_public_ip = false
+  capacity_provider_strategy {
+    capacity_provider = local.ecs_capacity_provider
+    weight            = 1
   }
 
   load_balancer {

@@ -45,7 +45,7 @@ resource "aws_docdb_cluster" "main" {
   engine                          = "docdb"
   master_username                 = var.docdb_master_username
   master_password                 = var.docdb_master_password
-  backup_retention_period         = 7
+  backup_retention_period         = 1
   preferred_backup_window         = "03:00-04:00"
   skip_final_snapshot             = true
   db_subnet_group_name            = aws_docdb_subnet_group.main.name

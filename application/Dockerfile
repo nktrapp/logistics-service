@@ -9,7 +9,7 @@ COPY domain/build.gradle domain/
 COPY infrastructure/build.gradle infrastructure/
 COPY application/build.gradle application/
 
-RUN chmod +x gradlew && ./gradlew dependencies --no-daemon || true
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew && ./gradlew dependencies --no-daemon || true
 
 COPY domain/ domain/
 COPY infrastructure/ infrastructure/
