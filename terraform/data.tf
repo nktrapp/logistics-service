@@ -43,6 +43,7 @@ locals {
   private_subnet_ids    = data.terraform_remote_state.base.outputs.private_subnet_ids
   ecs_cluster_id        = data.terraform_remote_state.base.outputs.ecs_cluster_id
   ecs_cluster_name      = data.terraform_remote_state.base.outputs.ecs_cluster_name
+  ecs_capacity_provider = data.terraform_remote_state.base.outputs.ecs_capacity_provider_name
   ecs_security_group_id = data.terraform_remote_state.base.outputs.ecs_security_group_id
   alb_listener_arn      = data.terraform_remote_state.base.outputs.alb_active_listener_arn
 

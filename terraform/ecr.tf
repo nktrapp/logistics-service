@@ -3,7 +3,7 @@ resource "aws_ecr_repository" "logistics_service" {
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
-    scan_on_push = true
+    scan_on_push = false
   }
 
   encryption_configuration {
@@ -21,11 +21,11 @@ resource "aws_ecr_lifecycle_policy" "logistics_service" {
   policy = jsonencode({
     rules = [{
       rulePriority = 1
-      description  = "Keep last 10 images"
+      description  = "Keep last 2 images"
       selection = {
         tagStatus   = "any"
         countType   = "imageCountMoreThan"
-        countNumber = 10
+        countNumber = 2
       }
       action = {
         type = "expire"

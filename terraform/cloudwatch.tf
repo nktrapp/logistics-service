@@ -1,8 +1,12 @@
 resource "aws_sns_topic" "alarms" {
+  count = var.create_cloudwatch_alarms ? 1 : 0
+
   name = "${var.project_name}-logistics-service-alarms"
 }
 
 resource "aws_cloudwatch_metric_alarm" "logistics_cpu_high" {
+  count = var.create_cloudwatch_alarms ? 1 : 0
+
   alarm_name          = "${var.project_name}-logistics-service-cpu-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
@@ -12,7 +16,7 @@ resource "aws_cloudwatch_metric_alarm" "logistics_cpu_high" {
   statistic           = "Average"
   threshold           = 80
   alarm_description   = "Logistics Service CPU > 80%"
-  alarm_actions       = [aws_sns_topic.alarms.arn]
+  alarm_actions       = [aws_sns_topic.alarms[0].arn]
 
   dimensions = {
     ClusterName = local.ecs_cluster_name
@@ -21,6 +25,8 @@ resource "aws_cloudwatch_metric_alarm" "logistics_cpu_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "logistics_memory_high" {
+  count = var.create_cloudwatch_alarms ? 1 : 0
+
   alarm_name          = "${var.project_name}-logistics-service-memory-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
@@ -30,7 +36,7 @@ resource "aws_cloudwatch_metric_alarm" "logistics_memory_high" {
   statistic           = "Average"
   threshold           = 85
   alarm_description   = "Logistics Service Memory > 85%"
-  alarm_actions       = [aws_sns_topic.alarms.arn]
+  alarm_actions       = [aws_sns_topic.alarms[0].arn]
 
   dimensions = {
     ClusterName = local.ecs_cluster_name
