@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "environment" {
   description = "Environment name"
   type        = string
-  default     = "production"
+  default     = "prod"
 }
 
 variable "project_name" {
@@ -68,4 +68,10 @@ variable "terraform_state_bucket" {
   description = "S3 bucket holding the base stack remote state"
   type        = string
   default     = "furb-logistics-terraform-state"
+}
+
+variable "contracts_ssm_root_prefix" {
+  description = "Root SSM prefix published by logistic-iac contracts"
+  type        = string
+  default     = "/logistic"
 }

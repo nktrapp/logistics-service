@@ -10,12 +10,12 @@ output "ecr_repository_url" {
 
 output "logistics_events_queue_url" {
   description = "logistics-events-queue.fifo URL"
-  value       = aws_sqs_queue.logistics_events.url
+  value       = local.logistics_events_queue_url
 }
 
 output "logistics_events_queue_arn" {
   description = "logistics-events-queue.fifo ARN"
-  value       = aws_sqs_queue.logistics_events.arn
+  value       = local.logistics_events_queue_arn
 }
 
 output "documentdb_endpoint" {

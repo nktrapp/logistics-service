@@ -52,7 +52,7 @@ resource "aws_iam_role" "ecs_task" {
   })
 }
 
-# SQS: publish to own logistics-events queue, consume the peer package-events queue.
+# SQS contracts are owned by logistic-iac/contracts and published through SSM.
 resource "aws_iam_role_policy" "ecs_task_sqs" {
   name = "${var.project_name}-logistics-sqs-access"
   role = aws_iam_role.ecs_task.id
@@ -70,9 +70,8 @@ resource "aws_iam_role_policy" "ecs_task_sqs" {
         "sqs:ChangeMessageVisibility"
       ]
       Resource = [
-        aws_sqs_queue.logistics_events.arn,
-        aws_sqs_queue.logistics_events_dlq.arn,
-        data.aws_sqs_queue.package_events.arn,
+        local.logistics_events_queue_arn,
+        local.package_events_queue_arn,
       ]
     }]
   })

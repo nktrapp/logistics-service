@@ -1,13 +1,12 @@
 name: logistics-service
 
 services:
-
   ministack:
     image: ministackorg/ministack:latest
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=sqs,secretsmanager,cloudwatch
+      - SERVICES=sqs,secretsmanager,cloudwatch,ssm
       - DEFAULT_REGION=us-east-1
       - EAGER_SERVICE_LOADING=1
     volumes:
@@ -48,39 +47,31 @@ services:
       timeout: 5s
       retries: 5
 
-  aws-init:
-    image: amazon/aws-cli:2.22.35
+  terraform-contracts:
+    image: hashicorp/terraform:1.8.5
     depends_on:
       ministack:
         condition: service_healthy
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        rm -rf /workdir
+        cp -R /workspace /workdir
+        terraform -chdir=/workdir/envs/local/ministack/contracts init -input=false
+        terraform -chdir=/workdir/envs/local/ministack/contracts apply -auto-approve -input=false
     environment:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       AWS_DEFAULT_REGION: us-east-1
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        aws --endpoint-url=http://ministack:4566 sqs create-queue --queue-name package-events-dlq.fifo --attributes FifoQueue=true
-        aws --endpoint-url=http://ministack:4566 sqs create-queue --queue-name logistics-events-dlq.fifo --attributes FifoQueue=true
-
-        PKG_DLQ_ARN=$$(aws --endpoint-url=http://ministack:4566 sqs get-queue-attributes \
-          --queue-url http://ministack:4566/000000000000/package-events-dlq.fifo \
-          --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)
-
-        LOG_DLQ_ARN=$$(aws --endpoint-url=http://ministack:4566 sqs get-queue-attributes \
-          --queue-url http://ministack:4566/000000000000/logistics-events-dlq.fifo \
-          --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)
-
-        aws --endpoint-url=http://ministack:4566 sqs create-queue \
-          --queue-name package-events-queue.fifo \
-          --attributes "{\"FifoQueue\":\"true\",\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"$$PKG_DLQ_ARN\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\"}"
-
-        aws --endpoint-url=http://ministack:4566 sqs create-queue \
-          --queue-name logistics-events-queue.fifo \
-          --attributes "{\"FifoQueue\":\"true\",\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"$$LOG_DLQ_ARN\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\"}"
-
-        echo "SQS FIFO queues created successfully"
+      TF_DATA_DIR: /terraform-data
+      TF_VAR_ministack_endpoint: http://ministack:4566
+      TF_VAR_environment: local
+      TF_VAR_project_name: logistic
+      TF_VAR_queue_name_prefix: ""
+    volumes:
+      - ${LOGISTIC_IAC_PATH:-../logistic-iac}:/workspace:ro
+      - terraform-state:/terraform-state
+      - terraform-data:/terraform-data
 
   logistics-service:
     build:
@@ -98,12 +89,14 @@ services:
       SPRING_CLOUD_AWS_CREDENTIALS_SECRET_KEY: test
       SPRING_CLOUD_AWS_REGION_STATIC: us-east-1
       APP_VIACEP_BASE_URL: https://viacep.com.br/ws
+      APP_MESSAGING_INBOUND_QUEUE: package-events-queue.fifo
+      APP_MESSAGING_OUTBOUND_QUEUE: logistics-events-queue.fifo
     depends_on:
       mongodb:
         condition: service_healthy
       redis:
         condition: service_healthy
-      aws-init:
+      terraform-contracts:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/management/health/liveness"]
@@ -127,3 +120,5 @@ volumes:
   ministack-data:
   mongodb-data:
   redis-data:
+  terraform-state:
+  terraform-data:
