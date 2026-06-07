@@ -43,12 +43,12 @@ jobs:
 
           git checkout -B main "$APPROVED_SHA"
 
-      - name: Set up JDK 25 (Gradle runtime)
-        if: ${{ env.SKIP_RELEASE != 'true' }}
-        uses: actions/setup-java@v5
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
         with:
-          distribution: temurin
+          distribution: oracle
           java-version: '25'
+          native-image-job-reports: true
 
       - name: Set up Gradle
         if: ${{ env.SKIP_RELEASE != 'true' }}

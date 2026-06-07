@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.jib)
+    alias(libs.plugins.graalvm)
 }
 
 dependencyManagement {
@@ -19,6 +20,7 @@ dependencies {
     implementation libs.spring.tx
     implementation libs.spring.boot.starter.webmvc
     implementation libs.spring.boot.starter.actuator
+    implementation("joda-time:joda-time:2.14.0") // Workaround pra instruir pro GraalVM a dependencia nativa do Hibernate validation.
     implementation libs.spring.boot.starter.validation
     implementation libs.spring.cloud.aws.starter.sqs
     implementation libs.jackson.databind
@@ -36,26 +38,12 @@ tasks.named('bootJar') {
     archiveFileName = "${project.parent?.name}.jar"
 }
 
-// Defaults are local-friendly; CI overrides the target with -Djib.to.image / -Djib.to.tags.
-jib {
-    from {
-        image = 'eclipse-temurin:25-jre'
-        platforms {
-            platform {
-                architecture = 'amd64'
-                os = 'linux'
-            }
+graalvmNative {
+    binaries {
+        named("main") {
+            imageName = "logistics-service"
+            mainClass = "br.furb.logistics.application.LogisticsServiceApplication"
         }
     }
-    to {
-        image = 'logistics-service'
-        tags = [project.version.toString()]
-    }
-    container {
-        ports = ['8080']
-        user = '1000:1000'
-        jvmFlags = ['-XX:+UseZGC', '-XX:MaxRAMPercentage=75.0']
-        environment = ['SPRING_PROFILES_ACTIVE': 'prod']
-        creationTime = 'USE_CURRENT_TIMESTAMP'
-    }
 }
+
