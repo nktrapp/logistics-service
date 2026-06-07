@@ -10,3 +10,6 @@ docker-compose*.yml
 compose.yml
 terraform/
 .github/
+
+!application/build/native/nativeCompile/
+!application/build/native/nativeCompile/**
