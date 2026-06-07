@@ -10,6 +10,13 @@ spring:
       fail-on-unknown-properties: false
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  web:
+    error:
+      include-message: always
+      include-binding-errors: always
+  threads:
+    virtual:
+      enabled: true
 
 management:
   endpoints:
@@ -38,11 +45,8 @@ management:
       enabled: true
 
 server:
-  port: 8082
+  port: {SERVER_PORT:0}
   shutdown: graceful
-  error:
-    include-message: always
-    include-binding-errors: always
 
 logging:
   level:
