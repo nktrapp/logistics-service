@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/nktrapp/logistics-service/compare/v1.2.0...v1.3.0) (2026-06-07)
+
+
+### Features
+
+* Adicionado Banner do Spring e ajustado as properties ([d18fed1](https://github.com/nktrapp/logistics-service/commit/d18fed1b1e4721ee21f5905df4d0bdef2563fab4))
+
 # [1.2.0](https://github.com/nktrapp/logistics-service/compare/v1.1.0...v1.2.0) (2026-06-07)
 
 
