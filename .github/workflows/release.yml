@@ -46,7 +46,7 @@ jobs:
       - name: Set up GraalVM
         uses: graalvm/setup-graalvm@v1
         with:
-          distribution: oracle
+          distribution: graalvm
           java-version: '25'
           native-image-job-reports: true
 
