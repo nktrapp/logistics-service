@@ -43,6 +43,7 @@ graalvmNative {
         named("main") {
             imageName = "logistics-service"
             mainClass = "br.furb.logistics.application.LogisticsServiceApplication"
+            buildArgs.add("--gc=G1")
         }
     }
 }

@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   release:
-    name: Semantic Release & Jib Publish
+    name: Semantic Release
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
@@ -67,7 +67,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Log in to Amazon ECR (for Jib push)
+      - name: Log in to Amazon ECR
         if: ${{ env.SKIP_RELEASE != 'true' }}
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -76,13 +76,13 @@ jobs:
         if: ${{ env.SKIP_RELEASE != 'true' }}
         run: echo "IMAGE=${{ steps.ecr.outputs.registry }}/furb-logistics/logistics-service" >> "$GITHUB_ENV"
 
-      - name: Semantic Release (version, changelog, tag, GitHub release, Jib image)
+      - name: Semantic Release (version, changelog, tag, GitHub release, Docker push)
         if: ${{ env.SKIP_RELEASE != 'true' }}
         uses: cycjimmy/semantic-release-action@v5
         with:
           extra_plugins: |
-            @semantic-release/changelog
             @semantic-release/exec
+            @semantic-release/changelog
             @semantic-release/git
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
