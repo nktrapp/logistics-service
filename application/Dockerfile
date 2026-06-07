@@ -1,40 +1,15 @@
-FROM eclipse-temurin:25-jdk-alpine AS builder
-
-WORKDIR /workspace
-
-# Copy build configuration first for dependency caching
-COPY gradle/ gradle/
-COPY gradlew build.gradle settings.gradle gradle.properties ./
-COPY domain/build.gradle domain/
-COPY infrastructure/build.gradle infrastructure/
-COPY application/build.gradle application/
-
-RUN sed -i 's/\r$//' gradlew && chmod +x gradlew && ./gradlew dependencies --no-daemon || true
-
-COPY domain/ domain/
-COPY infrastructure/ infrastructure/
-COPY application/ application/
-
-RUN ./gradlew :application:bootJar -x test --no-daemon
-
-FROM eclipse-temurin:25-jre-alpine
+FROM alpine:3.22
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-COPY --from=builder /workspace/application/build/libs/*.jar app.jar
+COPY application/build/native/nativeCompile/logistics-service .
 
 RUN chown -R appuser:appgroup /app
+
 USER appuser
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/management/health/liveness || exit 1
-
-ENTRYPOINT ["java", \
-  "-XX:+UseZGC", \
-  "-XX:MaxRAMPercentage=75.0", \
-  "-Djava.security.egd=file:/dev/./urandom", \
-  "-jar", "app.jar"]
+ENTRYPOINT ["./logistics-service"]

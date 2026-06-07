@@ -13,6 +13,7 @@ mapstruct = "1.6.3"
 jakartaValidation = "3.1.1"
 jib = "3.5.3"
 sonarqube = "7.3.1.8318"
+graalvm = "1.1.1"
 
 [libraries]
 # Spring Boot starters (versions managed by the Spring Boot BOM)
@@ -52,3 +53,4 @@ spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" }
 jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+graalvm = { id = "org.graalvm.buildtools.native", version.ref = "graalvm"  }
