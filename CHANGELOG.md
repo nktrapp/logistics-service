@@ -1,3 +1,11 @@
+# [1.2.0](https://github.com/nktrapp/logistics-service/compare/v1.1.0...v1.2.0) (2026-06-07)
+
+
+### Features
+
+* Migrando pra GraalVM ([a827980](https://github.com/nktrapp/logistics-service/commit/a8279807824dcae430b0054b73799c439a983659))
+* Migrando pra GraalVM ([a5577fc](https://github.com/nktrapp/logistics-service/commit/a5577fcd799fa201cbd1f90492f74a8704238814))
+
 # [1.1.0](https://github.com/nktrapp/logistics-service/compare/v1.0.0...v1.1.0) (2026-06-07)
 
 
