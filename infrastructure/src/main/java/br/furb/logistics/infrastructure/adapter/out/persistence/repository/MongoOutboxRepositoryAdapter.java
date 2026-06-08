@@ -4,6 +4,7 @@ import br.furb.logistics.domain.event.DomainEvent;
 import br.furb.logistics.domain.port.OutboxRepositoryPort;
 import br.furb.logistics.infrastructure.adapter.out.persistence.document.OutboxDocument;
 import br.furb.logistics.infrastructure.adapter.out.persistence.repository.mongo.OutboxMongoRepository;
+import br.furb.logistics.infrastructure.config.TraceContextSupport;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class MongoOutboxRepositoryAdapter implements OutboxRepositoryPort {
     private final OutboxMongoRepository mongoRepository;
     private final ObjectMapper objectMapper;
     private final MongoTemplate mongoTemplate;
+    private final TraceContextSupport traceContextSupport;
 
     @Override
     public void save(DomainEvent event) {
@@ -42,12 +44,15 @@ public class MongoOutboxRepositoryAdapter implements OutboxRepositoryPort {
             Instant createdAt = Instant.now();
             String payload = objectMapper.writeValueAsString(event.getPayload());
             String groupId = event.getPartitionKey() != null ? event.getPartitionKey() : event.getEventId();
+            TraceContextSupport.TraceCarrier traceCarrier = traceContextSupport.captureCurrent();
 
             OutboxDocument document = OutboxDocument.builder()
                     .eventId(event.getEventId())
                     .eventType(event.getEventType())
                     .payload(payload)
                     .groupId(groupId)
+                    .traceparent(traceCarrier.traceparent())
+                    .tracestate(traceCarrier.tracestate())
                     .status(STATUS_PENDING)
                     .nextAttemptAt(createdAt)
                     .retryCount(0)
@@ -174,6 +179,8 @@ public class MongoOutboxRepositoryAdapter implements OutboxRepositoryPort {
                 claimedDocument.getEventType(),
                 claimedDocument.getPayload(),
                 claimedDocument.getGroupId(),
+                claimedDocument.getTraceparent(),
+                claimedDocument.getTracestate(),
                 claimedDocument.getCreatedAt(),
                 retryCount
         ));

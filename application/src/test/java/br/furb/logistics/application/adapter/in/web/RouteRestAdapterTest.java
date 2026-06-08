@@ -5,7 +5,13 @@ import br.furb.logistics.application.usecase.GetRouteUseCase;
 import br.furb.logistics.domain.model.RouteStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -14,14 +20,18 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(RouteRestAdapter.class)
+@ExtendWith(OutputCaptureExtension.class)
 @DisplayName("RouteRestAdapter")
 class RouteRestAdapterTest {
+
+    private static final Logger log = LoggerFactory.getLogger(RouteRestAdapterTest.class);
 
     @Autowired
     MockMvc mockMvc;
@@ -73,6 +83,22 @@ class RouteRestAdapterTest {
 
         mockMvc.perform(get("/api/v1/routes").param("packageId", "missing"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Local logs remain readable instead of JSON structured output")
+    void shouldKeepLocalLogsReadable(CapturedOutput output) {
+        MDC.put("traceId", "4bf92f3577b34da6a3ce929d0e0e4736");
+        MDC.put("spanId", "00f067aa0ba902b7");
+        try {
+            log.info("local-readable-log-smoke");
+        } finally {
+            MDC.remove("traceId");
+            MDC.remove("spanId");
+        }
+
+        assertThat(output.getOut())
+                .contains("local-readable-log-smoke");
     }
 
     private RouteResponse sampleRoute() {

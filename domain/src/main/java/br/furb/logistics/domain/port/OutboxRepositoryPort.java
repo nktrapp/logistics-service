@@ -25,6 +25,8 @@ public interface OutboxRepositoryPort {
             String eventType,
             String payload,
             String groupId,
+            String traceparent,
+            String tracestate,
             Instant createdAt,
             int retryCount
     ) {}

@@ -22,7 +22,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,env,loggers
+        include: health,info,metrics,loggers,scheduledtasks,threaddump
       base-path: /management
   endpoint:
     health:
@@ -33,6 +33,30 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+  tracing:
+    export:
+      otlp:
+        enabled: ${MANAGEMENT_TRACING_EXPORT_OTLP_ENABLED:false}
+    propagation:
+      type: w3c
+    sampling:
+      probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:1.0}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT:}
+    resource-attributes:
+      "service.namespace": furb-logistics
+      "deployment.environment": ${APP_ENVIRONMENT:${spring.profiles.active:local}}
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
   health:
     mongodb:
       enabled: true
@@ -55,7 +79,7 @@ logging:
     io.awspring.cloud: INFO
     org.springframework.data.mongodb: WARN
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    correlation: "%replace([trace:%X{traceId:-}] ){'\\[trace:\\] ', ''}"
 
 app:
   viacep:

@@ -23,3 +23,11 @@ logging:
   level:
     root: INFO
     br.furb: INFO
+  structured:
+    format:
+      console: logstash
+    json:
+      add:
+        serviceName: ${spring.application.name}
+        environment: ${APP_ENVIRONMENT:${spring.profiles.active:prod}}
+        version: ${APP_VERSION:unknown}
