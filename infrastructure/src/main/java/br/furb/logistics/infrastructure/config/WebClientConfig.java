@@ -16,12 +16,12 @@ public class WebClientConfig {
     private int timeoutMs;
 
     @Bean
-    public RestClient restClient() {
+    public RestClient restClient(RestClient.Builder restClientBuilder) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeoutMs);
         requestFactory.setReadTimeout(timeoutMs);
 
-        return RestClient.builder()
+        return restClientBuilder
                 .baseUrl(viaCepBaseUrl)
                 .requestFactory(requestFactory)
                 .build();

@@ -28,6 +28,8 @@ public class OutboxDocument {
     private String eventType;
     private String payload;
     private String groupId;
+    private String traceparent;
+    private String tracestate;
 
     @Indexed
     private String status;

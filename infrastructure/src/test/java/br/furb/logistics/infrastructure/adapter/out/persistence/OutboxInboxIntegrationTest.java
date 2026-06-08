@@ -8,6 +8,7 @@ import br.furb.logistics.domain.port.OutboxRepositoryPort.RetryOutcome;
 import br.furb.logistics.infrastructure.adapter.out.persistence.repository.MongoInboxRepositoryAdapter;
 import br.furb.logistics.infrastructure.adapter.out.persistence.repository.MongoOutboxRepositoryAdapter;
 import br.furb.logistics.infrastructure.adapter.out.persistence.repository.mongo.OutboxMongoRepository;
+import br.furb.logistics.infrastructure.config.TraceContextSupport;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +38,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(classes = OutboxInboxIntegrationTest.TestConfig.class)
@@ -80,6 +83,8 @@ class OutboxInboxIntegrationTest {
         assertThat(entry.eventId()).isEqualTo(event.getEventId());
         assertThat(entry.eventType()).isEqualTo("route.failed");
         assertThat(entry.groupId()).isEqualTo("pkg-1");
+        assertThat(entry.traceparent()).isEqualTo("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
+        assertThat(entry.tracestate()).isEqualTo("rojo=00f067aa0ba902b7");
 
         outboxRepository.markAsPublished(entry.eventId(), Instant.now());
         assertThat(outboxRepository.countFailed()).isZero();
@@ -164,6 +169,16 @@ class OutboxInboxIntegrationTest {
         @Bean
         ObjectMapper objectMapper() {
             return new ObjectMapper();
+        }
+
+        @Bean
+        TraceContextSupport traceContextSupport() {
+            TraceContextSupport traceContextSupport = mock(TraceContextSupport.class);
+            when(traceContextSupport.captureCurrent()).thenReturn(new TraceContextSupport.TraceCarrier(
+                    "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+                    "rojo=00f067aa0ba902b7"
+            ));
+            return traceContextSupport;
         }
 
         @Bean
