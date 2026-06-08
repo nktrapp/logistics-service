@@ -4,5 +4,5 @@
  | |__| |_| | |_| || | ___) || |  | | |___ ___) |
  |_____\___/ \____|___|____/ |_| |___\____|____/ 
                                                  
-${application.name} :: v${build.version} :: ${spring.profiles.active}
+${spring.application.name} :: v@appVersion@ :: ${spring.profiles.active}
 Java ${java.version} :: Spring Boot ${spring-boot.version}
