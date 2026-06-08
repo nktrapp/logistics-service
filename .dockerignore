@@ -1,6 +1,4 @@
 .gradle
-build
-**/build
 *.md
 .git
 .gitignore
@@ -10,6 +8,3 @@ docker-compose*.yml
 compose.yml
 terraform/
 .github/
-
-!application/build/native/nativeCompile/
-!application/build/native/nativeCompile/**

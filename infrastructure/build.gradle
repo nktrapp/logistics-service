@@ -1,3 +1,5 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
 plugins {
     alias(libs.plugins.spring.boot) apply false
     alias(libs.plugins.spring.dependency.management)
@@ -5,7 +7,7 @@ plugins {
 
 dependencyManagement {
     imports {
-        mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+        mavenBom SpringBootPlugin.BOM_COORDINATES
         mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:${libs.versions.springCloudAws.get()}"
     }
 }
