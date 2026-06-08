@@ -45,7 +45,7 @@ management:
       enabled: true
 
 server:
-  port: {SERVER_PORT:0}
+  port: ${SERVER_PORT:0}
   shutdown: graceful
 
 logging:
@@ -71,7 +71,8 @@ app:
       fixed-delay-ms: 2000
       batch-size: 50
       max-attempts: 5
-      retry-delay-ms: 5000
+      retry-delay-ms: 5000             # base delay for exponential backoff (doubles each attempt)
+      max-retry-delay-ms: 60000        # cap for the exponential backoff delay
       processing-timeout-ms: 60000
     retention:
       fixed-delay-ms: 3600000        # purge sweep interval (1h)

@@ -1,7 +1,8 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
 plugins {
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
-    alias(libs.plugins.jib)
     alias(libs.plugins.graalvm)
 }
 
@@ -20,7 +21,6 @@ dependencies {
     implementation libs.spring.tx
     implementation libs.spring.boot.starter.webmvc
     implementation libs.spring.boot.starter.actuator
-    implementation("joda-time:joda-time:2.14.0") // Workaround pra instruir pro GraalVM a dependencia nativa do Hibernate validation.
     implementation libs.spring.boot.starter.validation
     implementation libs.spring.cloud.aws.starter.sqs
     implementation libs.jackson.databind
@@ -38,12 +38,20 @@ tasks.named('bootJar') {
     archiveFileName = "${project.parent?.name}.jar"
 }
 
+// Bake the project version into banner.txt at build time (no JAR manifest exists in a native image).
+tasks.named('processResources') {
+    filesMatching('banner.txt') {
+        filter(ReplaceTokens, tokens: [appVersion: version.toString()])
+    }
+}
+
 graalvmNative {
     binaries {
         named("main") {
             imageName = "logistics-service"
             mainClass = "br.furb.logistics.application.LogisticsServiceApplication"
-            //buildArgs.add("--gc=G1")
+            buildArgs.add("--enable-monitoring=heapdump,jfr,jvmstat")
+            buildArgs.add("-H:+StaticExecutableWithDynamicLibC")
         }
     }
 }
