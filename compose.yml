@@ -74,7 +74,8 @@ services:
       - terraform-data:/terraform-data
 
   logistics-service:
-    image: 934347069710.dkr.ecr.us-east-1.amazonaws.com/furb-logistics/logistics-service:1.2.0
+    #image: 934347069710.dkr.ecr.us-east-1.amazonaws.com/furb-logistics/logistics-service:1.2.0
+    image: nktrapp/logistics-service:1.0.5
     ports:
       - "0:8080"
     environment:
@@ -105,7 +106,8 @@ services:
       start_period: 60s
 
   package-service:
-    image: 934347069710.dkr.ecr.us-east-1.amazonaws.com/furb-logistics/package-service:1.2.0
+    #image: 934347069710.dkr.ecr.us-east-1.amazonaws.com/furb-logistics/package-service:1.2.0
+    image: nktrapp/package-service:1.0.0
     ports:
       - "0:8080"
     environment:

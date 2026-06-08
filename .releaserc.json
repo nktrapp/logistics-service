@@ -12,7 +12,7 @@
       "@semantic-release/exec",
       {
         "prepareCmd": "sed -i 's/^version=.*/version=${nextRelease.version}/' gradle.properties",
-        "publishCmd": "./gradlew :application:nativeCompile -x test --no-daemon && docker build -f application/Dockerfile -t ${process.env.IMAGE}:${nextRelease.version} -t ${process.env.IMAGE}:latest . && docker push ${process.env.IMAGE}:${nextRelease.version} && docker push ${process.env.IMAGE}:latest"
+        "publishCmd": "docker build -f application/Dockerfile -t ${process.env.IMAGE}:${nextRelease.version} -t ${process.env.IMAGE}:latest . && docker push ${process.env.IMAGE}:${nextRelease.version} && docker push ${process.env.IMAGE}:latest"
       }
     ],
     [

@@ -2,6 +2,7 @@ plugins {
     id 'java'
     alias(libs.plugins.spring.boot) apply false
     alias(libs.plugins.spring.dependency.management) apply false
+    alias(libs.plugins.graalvm) apply false
     id 'jacoco'
     alias(libs.plugins.sonarqube)
 }
@@ -27,6 +28,10 @@ sonar {
 subprojects {
     apply plugin: 'java'
     apply plugin: 'jacoco'
+
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs << '-parameters'
+    }
 
     // Override the Testcontainers version managed by the Spring Boot BOM.
     // 2.x is required for Docker Engine 29+ (older docker-java defaults to API 1.32, rejected by the engine).
