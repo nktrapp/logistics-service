@@ -12,6 +12,7 @@ public class ViaCepMapper {
                 .city(response.getLocalidade())
                 .state(response.getUf())
                 .neighborhood(response.getBairro())
+                .ibgeCode(response.getIbge())
                 .build();
     }
 }

@@ -91,6 +91,7 @@ services:
       APP_VIACEP_BASE_URL: https://viacep.com.br/ws
       APP_MESSAGING_INBOUND_QUEUE: package-events-queue.fifo
       APP_MESSAGING_OUTBOUND_QUEUE: logistics-events-queue.fifo
+      APP_MESSAGING_HUB_EVENTS_QUEUE: hub-events-queue.fifo
     depends_on:
       mongodb:
         condition: service_healthy
