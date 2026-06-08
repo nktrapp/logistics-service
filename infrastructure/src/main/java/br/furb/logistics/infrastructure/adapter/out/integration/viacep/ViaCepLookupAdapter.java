@@ -48,7 +48,7 @@ public class ViaCepLookupAdapter implements CepLookupPort {
                         .retrieve()
                         .body(ViaCepResponse.class);
 
-                if (isNull(response) || response.isErro()) {
+                if (isNull(response) || Boolean.TRUE.equals(response.getErro())) {
                     log.warn("[viacep] CEP {} not found or invalid", cep);
                     return Optional.empty();
                 }
