@@ -158,9 +158,43 @@ class OutboxRelaySchedulerAdapterTest {
         }
     }
 
+    @Nested
+    @DisplayName("Queue routing")
+    class QueueRouting {
+
+        @Test
+        @DisplayName("Given a route.* event, should publish to the outbound (logistics) queue")
+        void shouldRouteRouteEventsToOutboundQueue() {
+            OutboxRelaySchedulerAdapter scheduler = buildScheduler();
+            OutboxEntry entry = new OutboxEntry("event-1", "route.calculated", "{\"packageId\":\"pkg-1\"}",
+                    "pkg-1", Instant.parse("2026-05-31T10:00:00Z"), 0);
+            when(outboxRepository.claimPending(eq(10), argThat(Objects::nonNull), argThat(Objects::nonNull)))
+                    .thenReturn(List.of(entry));
+
+            scheduler.relay();
+
+            verify(eventPublisherPort).publish(eq("logistics-events-queue"), any(), eq("pkg-1"), eq("event-1"));
+        }
+
+        @Test
+        @DisplayName("Given a hub.* event, should publish to the dedicated internal hub-events queue")
+        void shouldRouteHubEventsToHubQueue() {
+            OutboxRelaySchedulerAdapter scheduler = buildScheduler();
+            OutboxEntry entry = new OutboxEntry("event-2", "hub.created", "{\"hubId\":\"hub-1\"}",
+                    "hub-1", Instant.parse("2026-05-31T10:00:00Z"), 0);
+            when(outboxRepository.claimPending(eq(10), argThat(Objects::nonNull), argThat(Objects::nonNull)))
+                    .thenReturn(List.of(entry));
+
+            scheduler.relay();
+
+            verify(eventPublisherPort).publish(eq("hub-events-queue"), any(), eq("hub-1"), eq("event-2"));
+        }
+    }
+
     private OutboxRelaySchedulerAdapter buildScheduler() {
         OutboxRelaySchedulerAdapter scheduler = new OutboxRelaySchedulerAdapter(outboxRepository, eventPublisherPort, new ObjectMapper());
         ReflectionTestUtils.setField(scheduler, "outboundQueue", "logistics-events-queue");
+        ReflectionTestUtils.setField(scheduler, "hubEventsQueue", "hub-events-queue");
         ReflectionTestUtils.setField(scheduler, "batchSize", 10);
         ReflectionTestUtils.setField(scheduler, "maxAttempts", 5);
         ReflectionTestUtils.setField(scheduler, "retryDelayMs", 5000L);

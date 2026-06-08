@@ -29,6 +29,9 @@ public class OutboxRelaySchedulerAdapter {
     @Value("${app.messaging.outbound-queue:logistics-events-queue.fifo}")
     private String outboundQueue;
 
+    @Value("${app.messaging.hub-events-queue:hub-events-queue.fifo}")
+    private String hubEventsQueue;
+
     @Value("${app.outbox.relay.batch-size:50}")
     private int batchSize;
 
@@ -63,7 +66,8 @@ public class OutboxRelaySchedulerAdapter {
             try {
                 String envelope = buildEnvelope(entry);
                 String groupId = entry.groupId() != null ? entry.groupId() : entry.eventId();
-                eventPublisherPort.publish(outboundQueue, envelope, groupId, entry.eventId());
+                String targetQueue = resolveTargetQueue(entry.eventType());
+                eventPublisherPort.publish(targetQueue, envelope, groupId, entry.eventId());
                 outboxRepository.markAsPublished(entry.eventId(), Instant.now());
             } catch (Exception e) {
                 long backoffMillis = computeBackoffMillis(entry.retryCount());
@@ -99,6 +103,13 @@ public class OutboxRelaySchedulerAdapter {
         }
         long delay = retryDelayMs * (1L << retryCount);
         return Math.min(delay, maxRetryDelayMs);
+    }
+
+    private String resolveTargetQueue(String eventType) {
+        if (eventType != null && eventType.startsWith("hub.")) {
+            return hubEventsQueue;
+        }
+        return outboundQueue;
     }
 
     private String buildEnvelope(OutboxEntry entry) {

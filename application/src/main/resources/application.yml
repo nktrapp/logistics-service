@@ -66,6 +66,11 @@ app:
   messaging:
     inbound-queue: ${APP_MESSAGING_INBOUND_QUEUE:package-events-queue.fifo}
     outbound-queue: ${APP_MESSAGING_OUTBOUND_QUEUE:logistics-events-queue.fifo}
+    hub-events-queue: ${APP_MESSAGING_HUB_EVENTS_QUEUE:hub-events-queue.fifo}
+  routing:
+    auto-connect:
+      neighbors: ${APP_ROUTING_AUTO_CONNECT_NEIGHBORS:3}            # nº de vizinhos mais próximos (K)
+      avg-speed-kmh: ${APP_ROUTING_AUTO_CONNECT_AVG_SPEED_KMH:60}   # velocidade média p/ derivar transitTimeHours
   outbox:
     relay:
       fixed-delay-ms: 2000
