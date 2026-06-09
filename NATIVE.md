@@ -53,6 +53,21 @@ SQS listeners, `HubDataSeeder`, use-case wiring, `OtlpHttpSpanExporter`). This i
 safety net — it runs inside the existing `ci.yml` `build`. When you add a
 `@Bean`/`@Profile`/`@ConditionalOnProperty`, run this test.
 
+## Manual native hints (and why they stay)
+GraalVM only includes what is statically reachable; two things here are not, so they are
+registered explicitly. These are **necessary, not workarounds** — do not remove them.
+- `IbgeCsvMunicipalityAdapter.GeoResourceHints` registers `geo/municipios.csv`. GraalVM
+  **never** auto-includes classpath resources; without it the CSV is absent and geocoding
+  fails at runtime (not at build).
+- `NativeHintsConfig` registers Jackson binding reflection for the SQS event payloads,
+  `ViaCepResponse` and `CepInfo`. These types are reached only through runtime `ObjectMapper`
+  / `RestClient` calls in adapter code (no static reachability, not an auto-hinted role like a
+  controller body), so native reflection needs them registered or (de)serialization fails at
+  runtime.
+
+To empirically re-verify necessity: remove a hint on a branch, run the **Native Check**
+workflow, then exercise the path on the native binary — it fails without the hint.
+
 ## Validation matrix
 1. **JVM build + AOT guard:** `./gradlew build` — runs on every PR via `ci.yml`.
 2. **Native compile:** `./gradlew :application:nativeCompile` (slow) — also the manual
