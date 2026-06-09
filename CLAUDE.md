@@ -22,6 +22,8 @@ Spring Boot microservice for route calculation (Dijkstra over a hub graph) + Via
 - New use case → add a `@Bean` in `UseCaseConfig`.
 - JDK 25: JUnit BOM + `net.bytebuddy.experimental=true` pinned in `build.gradle.kts` — required.
 - New code: prefer explicit types over `var`.
+- **Native image (GraalVM/AOT):** the build is profile-agnostic — Spring AOT freezes the bean graph under the *default* profile. **Never gate a needed bean on a runtime value** (`@Profile`/`@ConditionalOnProperty`/property default) or it is pruned silently from the image. Include the bean and no-op it (see `HubDataSeeder`'s in-`run()` `matchesProfiles` guard) or read a runtime value inside the bean. `AotBeanGraphContractTest` (`./gradlew test` → `processAot`) guards this per-PR. Full contract: `NATIVE.md`.
+- **Tracing on/off in native** = `MANAGEMENT_TRACING_SAMPLING_PROBABILITY` (`0` disables), NOT `management.tracing.export.otlp.enabled` (AOT-frozen no-op); the OTLP exporter is always present in the image.
 
 ## Infra
 Per-service Terraform in `terraform/` (consumes `terraform/base/` via remote state). Uses ElastiCache (Redis).
