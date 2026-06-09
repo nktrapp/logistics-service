@@ -1,6 +1,7 @@
 package br.furb.logistics.application.usecase;
 
 import br.furb.logistics.application.dto.RegisterConnectionCommand;
+import br.furb.logistics.application.mapper.HubConnectionMapper;
 import br.furb.logistics.domain.exception.HubNotFoundException;
 import br.furb.logistics.domain.model.Hub;
 import br.furb.logistics.domain.model.HubConnection;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -32,6 +34,8 @@ class RegisterHubConnectionUseCaseTest {
     @Mock
     HubRepositoryPort hubRepository;
 
+    private final HubConnectionMapper hubConnectionMapper = Mappers.getMapper(HubConnectionMapper.class);
+
     private RegisterConnectionCommand command() {
         return new RegisterConnectionCommand("origin-1", "dest-1", new BigDecimal("50.0"), 6);
     }
@@ -39,7 +43,7 @@ class RegisterHubConnectionUseCaseTest {
     @Test
     @DisplayName("Given both hubs exist, should persist the connection")
     void shouldRegisterConnection() {
-        RegisterHubConnectionUseCase useCase = new RegisterHubConnectionUseCase(hubConnectionRepository, hubRepository);
+        RegisterHubConnectionUseCase useCase = new RegisterHubConnectionUseCase(hubConnectionRepository, hubRepository, hubConnectionMapper);
         when(hubRepository.findById("origin-1")).thenReturn(Optional.of(buildHub("origin-1")));
         when(hubRepository.findById("dest-1")).thenReturn(Optional.of(buildHub("dest-1")));
         HubConnection saved = HubConnection.builder()
@@ -56,7 +60,7 @@ class RegisterHubConnectionUseCaseTest {
     @Test
     @DisplayName("Given the origin hub does not exist, should throw HubNotFoundException and not persist")
     void shouldThrowWhenOriginMissing() {
-        RegisterHubConnectionUseCase useCase = new RegisterHubConnectionUseCase(hubConnectionRepository, hubRepository);
+        RegisterHubConnectionUseCase useCase = new RegisterHubConnectionUseCase(hubConnectionRepository, hubRepository, hubConnectionMapper);
         when(hubRepository.findById("origin-1")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.execute(command()))
@@ -68,7 +72,7 @@ class RegisterHubConnectionUseCaseTest {
     @Test
     @DisplayName("Given the destination hub does not exist, should throw HubNotFoundException and not persist")
     void shouldThrowWhenDestinationMissing() {
-        RegisterHubConnectionUseCase useCase = new RegisterHubConnectionUseCase(hubConnectionRepository, hubRepository);
+        RegisterHubConnectionUseCase useCase = new RegisterHubConnectionUseCase(hubConnectionRepository, hubRepository, hubConnectionMapper);
         when(hubRepository.findById("origin-1")).thenReturn(Optional.of(buildHub("origin-1")));
         when(hubRepository.findById("dest-1")).thenReturn(Optional.empty());
 

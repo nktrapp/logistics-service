@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 public class GetHubUseCase {
 
     private final HubRepositoryPort hubRepository;
+    private final HubMapper hubMapper;
 
     public HubResponse execute(String hubId) {
         log.info("[get-hub] Fetching hub {}", hubId);
@@ -20,6 +21,6 @@ public class GetHubUseCase {
         Hub hub = hubRepository.findById(hubId)
                 .orElseThrow(() -> new HubNotFoundException(hubId));
 
-        return HubMapper.INSTANCE.toResponse(hub);
+        return hubMapper.toResponse(hub);
     }
 }

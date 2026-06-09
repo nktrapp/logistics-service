@@ -1,5 +1,8 @@
 package br.furb.logistics.application.config;
 
+import br.furb.logistics.application.mapper.HubConnectionMapper;
+import br.furb.logistics.application.mapper.HubMapper;
+import br.furb.logistics.application.mapper.RouteMapper;
 import br.furb.logistics.application.service.HubMeshService;
 import br.furb.logistics.application.service.RouteCalculationService;
 import br.furb.logistics.application.usecase.BuildHubConnectionsUseCase;
@@ -42,8 +45,9 @@ public class UseCaseConfig {
     @Bean
     public RegisterHubUseCase registerHubUseCase(CepLookupPort cepLookupPort,
                                                  MunicipalityGeocodingPort municipalityGeocodingPort,
-                                                 PersistRegisteredHubUseCase persistRegisteredHubUseCase) {
-        return new RegisterHubUseCase(cepLookupPort, municipalityGeocodingPort, persistRegisteredHubUseCase);
+                                                 PersistRegisteredHubUseCase persistRegisteredHubUseCase,
+                                                 HubMapper hubMapper) {
+        return new RegisterHubUseCase(cepLookupPort, municipalityGeocodingPort, persistRegisteredHubUseCase, hubMapper);
     }
 
     @Bean
@@ -73,8 +77,9 @@ public class UseCaseConfig {
 
     @Bean
     public RegisterHubConnectionUseCase registerHubConnectionUseCase(HubConnectionRepositoryPort hubConnectionRepository,
-                                                                     HubRepositoryPort hubRepository) {
-        return new RegisterHubConnectionUseCase(hubConnectionRepository, hubRepository);
+                                                                     HubRepositoryPort hubRepository,
+                                                                     HubConnectionMapper hubConnectionMapper) {
+        return new RegisterHubConnectionUseCase(hubConnectionRepository, hubRepository, hubConnectionMapper);
     }
 
     @Bean
@@ -85,10 +90,11 @@ public class UseCaseConfig {
                                                        InboxRepositoryPort inboxRepository,
                                                        RouteCalculationService routeCalculationService,
                                                        PersistCalculatedRouteUseCase persistCalculatedRouteUseCase,
-                                                       PersistFailedRouteUseCase persistFailedRouteUseCase) {
+                                                       PersistFailedRouteUseCase persistFailedRouteUseCase,
+                                                       RouteMapper routeMapper) {
         return new CalculateRouteUseCase(routeRepository, hubRepository, hubConnectionRepository,
                 cepLookupPort, inboxRepository, routeCalculationService, persistCalculatedRouteUseCase,
-                persistFailedRouteUseCase);
+                persistFailedRouteUseCase, routeMapper);
     }
 
     @Bean
@@ -126,17 +132,20 @@ public class UseCaseConfig {
     }
 
     @Bean
-    public GetRouteUseCase getRouteUseCase(RouteRepositoryPort routeRepository) {
-        return new GetRouteUseCase(routeRepository);
+    public GetRouteUseCase getRouteUseCase(RouteRepositoryPort routeRepository,
+                                           RouteMapper routeMapper) {
+        return new GetRouteUseCase(routeRepository, routeMapper);
     }
 
     @Bean
-    public ListHubsUseCase listHubsUseCase(HubRepositoryPort hubRepository) {
-        return new ListHubsUseCase(hubRepository);
+    public ListHubsUseCase listHubsUseCase(HubRepositoryPort hubRepository,
+                                           HubMapper hubMapper) {
+        return new ListHubsUseCase(hubRepository, hubMapper);
     }
 
     @Bean
-    public GetHubUseCase getHubUseCase(HubRepositoryPort hubRepository) {
-        return new GetHubUseCase(hubRepository);
+    public GetHubUseCase getHubUseCase(HubRepositoryPort hubRepository,
+                                       HubMapper hubMapper) {
+        return new GetHubUseCase(hubRepository, hubMapper);
     }
 }

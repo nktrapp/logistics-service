@@ -22,6 +22,7 @@ public class RegisterHubUseCase {
     private final CepLookupPort cepLookupPort;
     private final MunicipalityGeocodingPort municipalityGeocodingPort;
     private final PersistRegisteredHubUseCase persistRegisteredHubUseCase;
+    private final HubMapper hubMapper;
 
     public HubResponse execute(RegisterHubCommand command) {
         log.info("[register-hub] Registering hub '{}' with CEP {}", command.name(), command.cep());
@@ -49,7 +50,7 @@ public class RegisterHubUseCase {
 
         log.info("[register-hub] Hub '{}' registered with id {}", saved.getName(), saved.getId());
 
-        return HubMapper.INSTANCE.toResponse(saved);
+        return hubMapper.toResponse(saved);
     }
 
     private Optional<Coordinates> resolveCoordinates(CepInfo cepInfo) {

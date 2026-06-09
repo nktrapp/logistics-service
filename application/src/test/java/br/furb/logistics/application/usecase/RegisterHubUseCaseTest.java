@@ -2,6 +2,7 @@ package br.furb.logistics.application.usecase;
 
 import br.furb.logistics.application.dto.HubResponse;
 import br.furb.logistics.application.dto.RegisterHubCommand;
+import br.furb.logistics.application.mapper.HubMapper;
 import br.furb.logistics.application.usecase.transaction.PersistRegisteredHubUseCase;
 import br.furb.logistics.domain.exception.CepValidationException;
 import br.furb.logistics.domain.model.CepInfo;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
 
 import java.util.Optional;
 
@@ -38,10 +40,12 @@ class RegisterHubUseCaseTest {
     @Mock
     PersistRegisteredHubUseCase persistRegisteredHubUseCase;
 
+    private final HubMapper hubMapper = Mappers.getMapper(HubMapper.class);
+
     @Test
     @DisplayName("Given a resolvable CEP with coordinates, should enrich the hub from ViaCEP+IBGE and persist it as active")
     void shouldRegisterHubFromCepAndIbgeData() {
-        RegisterHubUseCase useCase = new RegisterHubUseCase(cepLookupPort, municipalityGeocodingPort, persistRegisteredHubUseCase);
+        RegisterHubUseCase useCase = new RegisterHubUseCase(cepLookupPort, municipalityGeocodingPort, persistRegisteredHubUseCase, hubMapper);
         when(cepLookupPort.findByCep("89010000")).thenReturn(Optional.of(CepInfo.builder()
                 .cep("89010000").city("Blumenau").state("SC").neighborhood("Centro").ibgeCode("4202404").build()));
         when(municipalityGeocodingPort.findByIbgeCode("4202404"))
@@ -68,7 +72,7 @@ class RegisterHubUseCaseTest {
     @Test
     @DisplayName("Given an unresolvable CEP, should throw CepValidationException and not persist the hub")
     void shouldThrowWhenCepInvalid() {
-        RegisterHubUseCase useCase = new RegisterHubUseCase(cepLookupPort, municipalityGeocodingPort, persistRegisteredHubUseCase);
+        RegisterHubUseCase useCase = new RegisterHubUseCase(cepLookupPort, municipalityGeocodingPort, persistRegisteredHubUseCase, hubMapper);
         when(cepLookupPort.findByCep("00000000")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.execute(new RegisterHubCommand("Hub Centro", "00000000")))
@@ -80,7 +84,7 @@ class RegisterHubUseCaseTest {
     @Test
     @DisplayName("Given a CEP whose municipality is not geocodable, should still persist the hub without coordinates")
     void shouldRegisterHubWithoutCoordinatesWhenGeocodingFails() {
-        RegisterHubUseCase useCase = new RegisterHubUseCase(cepLookupPort, municipalityGeocodingPort, persistRegisteredHubUseCase);
+        RegisterHubUseCase useCase = new RegisterHubUseCase(cepLookupPort, municipalityGeocodingPort, persistRegisteredHubUseCase, hubMapper);
         when(cepLookupPort.findByCep("89010000")).thenReturn(Optional.of(CepInfo.builder()
                 .cep("89010000").city("Cidade Desconhecida").state("SC").neighborhood("Centro").ibgeCode("9999999").build()));
         when(municipalityGeocodingPort.findByIbgeCode("9999999")).thenReturn(Optional.empty());

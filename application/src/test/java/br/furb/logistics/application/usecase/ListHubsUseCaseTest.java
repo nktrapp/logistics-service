@@ -1,6 +1,7 @@
 package br.furb.logistics.application.usecase;
 
 import br.furb.logistics.application.dto.HubResponse;
+import br.furb.logistics.application.mapper.HubMapper;
 import br.furb.logistics.domain.model.Hub;
 import br.furb.logistics.domain.port.HubRepositoryPort;
 import org.junit.jupiter.api.DisplayName;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
 
 import java.util.List;
 
@@ -21,10 +23,12 @@ class ListHubsUseCaseTest {
     @Mock
     HubRepositoryPort hubRepository;
 
+    private final HubMapper hubMapper = Mappers.getMapper(HubMapper.class);
+
     @Test
     @DisplayName("Given several hubs, should map all of them to responses")
     void shouldListHubs() {
-        ListHubsUseCase useCase = new ListHubsUseCase(hubRepository);
+        ListHubsUseCase useCase = new ListHubsUseCase(hubRepository, hubMapper);
         when(hubRepository.findAll()).thenReturn(List.of(buildHub("hub-1"), buildHub("hub-2")));
 
         List<HubResponse> responses = useCase.execute();
@@ -35,7 +39,7 @@ class ListHubsUseCaseTest {
     @Test
     @DisplayName("Given no hubs, should return an empty list")
     void shouldReturnEmptyWhenNoHubs() {
-        ListHubsUseCase useCase = new ListHubsUseCase(hubRepository);
+        ListHubsUseCase useCase = new ListHubsUseCase(hubRepository, hubMapper);
         when(hubRepository.findAll()).thenReturn(List.of());
 
         List<HubResponse> responses = useCase.execute();
