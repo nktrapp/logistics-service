@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/nktrapp/logistics-service/compare/v1.5.0...v1.5.1) (2026-06-09)
+
+
+### Bug Fixes
+
+* usa componentModel spring no MapStruct para compatibilidade com GraalVM native ([d49405e](https://github.com/nktrapp/logistics-service/commit/d49405e5e99ac3a3e99f3a3c83f91b496a09cca8))
+
 # [1.5.0](https://github.com/nktrapp/logistics-service/compare/v1.4.0...v1.5.0) (2026-06-08)
 
 
