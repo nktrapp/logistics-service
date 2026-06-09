@@ -8,8 +8,6 @@ spring:
         write-dates-as-timestamps: false
     deserialization:
       fail-on-unknown-properties: false
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
   web:
     error:
       include-message: always
