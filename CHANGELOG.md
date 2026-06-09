@@ -1,3 +1,10 @@
+## [1.5.4](https://github.com/nktrapp/logistics-service/compare/v1.5.3...v1.5.4) (2026-06-09)
+
+
+### Bug Fixes
+
+* habilita OTLP tracing export por default para incluir o exporter na imagem nativa ([d430450](https://github.com/nktrapp/logistics-service/commit/d430450580a5018291c32f20cc429c44b7b0b20a))
+
 ## [1.5.3](https://github.com/nktrapp/logistics-service/compare/v1.5.2...v1.5.3) (2026-06-09)
 
 
