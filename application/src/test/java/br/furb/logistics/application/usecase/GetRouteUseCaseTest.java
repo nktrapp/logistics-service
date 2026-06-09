@@ -1,6 +1,7 @@
 package br.furb.logistics.application.usecase;
 
 import br.furb.logistics.application.dto.RouteResponse;
+import br.furb.logistics.application.mapper.RouteMapper;
 import br.furb.logistics.domain.model.Route;
 import br.furb.logistics.domain.model.RouteStatus;
 import br.furb.logistics.domain.port.RouteRepositoryPort;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
 
 import java.time.Instant;
 import java.util.List;
@@ -24,10 +26,12 @@ class GetRouteUseCaseTest {
     @Mock
     RouteRepositoryPort routeRepository;
 
+    private final RouteMapper routeMapper = Mappers.getMapper(RouteMapper.class);
+
     @Test
     @DisplayName("Given an existing route id, should return the mapped response")
     void shouldFindById() {
-        GetRouteUseCase useCase = new GetRouteUseCase(routeRepository);
+        GetRouteUseCase useCase = new GetRouteUseCase(routeRepository, routeMapper);
         when(routeRepository.findById("route-1")).thenReturn(Optional.of(buildRoute()));
 
         Optional<RouteResponse> response = useCase.findById("route-1");
@@ -38,7 +42,7 @@ class GetRouteUseCaseTest {
     @Test
     @DisplayName("Given an unknown route id, should return empty")
     void shouldReturnEmptyWhenRouteMissing() {
-        GetRouteUseCase useCase = new GetRouteUseCase(routeRepository);
+        GetRouteUseCase useCase = new GetRouteUseCase(routeRepository, routeMapper);
         when(routeRepository.findById("missing")).thenReturn(Optional.empty());
 
         Optional<RouteResponse> response = useCase.findById("missing");
@@ -49,7 +53,7 @@ class GetRouteUseCaseTest {
     @Test
     @DisplayName("Given an existing package id, should return the mapped route response")
     void shouldFindByPackageId() {
-        GetRouteUseCase useCase = new GetRouteUseCase(routeRepository);
+        GetRouteUseCase useCase = new GetRouteUseCase(routeRepository, routeMapper);
         when(routeRepository.findByPackageId("pkg-1")).thenReturn(Optional.of(buildRoute()));
 
         Optional<RouteResponse> response = useCase.findByPackageId("pkg-1");

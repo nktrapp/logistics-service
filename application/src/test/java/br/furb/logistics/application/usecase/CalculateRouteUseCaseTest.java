@@ -1,6 +1,7 @@
 package br.furb.logistics.application.usecase;
 
 import br.furb.logistics.application.dto.RouteResponse;
+import br.furb.logistics.application.mapper.RouteMapper;
 import br.furb.logistics.application.service.RouteCalculationService;
 import br.furb.logistics.application.usecase.transaction.PersistCalculatedRouteUseCase;
 import br.furb.logistics.application.usecase.transaction.PersistFailedRouteUseCase;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
 
 import java.time.Instant;
 import java.util.List;
@@ -62,6 +64,8 @@ class CalculateRouteUseCaseTest {
     @Mock
     PersistFailedRouteUseCase persistFailedRouteUseCase;
 
+    private final RouteMapper routeMapper = Mappers.getMapper(RouteMapper.class);
+
     private CalculateRouteUseCase buildUseCase() {
         return new CalculateRouteUseCase(
                 routeRepository,
@@ -71,7 +75,8 @@ class CalculateRouteUseCaseTest {
                 inboxRepository,
                 routeCalculationService,
                 persistCalculatedRouteUseCase,
-                persistFailedRouteUseCase
+                persistFailedRouteUseCase,
+                routeMapper
         );
     }
 

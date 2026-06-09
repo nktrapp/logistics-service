@@ -41,6 +41,7 @@ public class CalculateRouteUseCase {
     private final RouteCalculationService routeCalculationService;
     private final PersistCalculatedRouteUseCase persistCalculatedRouteUseCase;
     private final PersistFailedRouteUseCase persistFailedRouteUseCase;
+    private final RouteMapper routeMapper;
 
     public RouteResponse execute(String eventId, String packageId, String senderCep, String recipientCep) {
         if (inboxRepository.existsByEventId(eventId)) {
@@ -89,7 +90,7 @@ public class CalculateRouteUseCase {
                     result
             );
 
-            return saved == null ? null : RouteMapper.INSTANCE.toResponse(saved);
+            return saved == null ? null : routeMapper.toResponse(saved);
         } catch (RouteCalculationException | CepValidationException e) {
             // Permanent failure (no reachable/eligible hubs or an invalid CEP): notify the package
             // service via route.failed and acknowledge the message instead of retrying to the DLQ.

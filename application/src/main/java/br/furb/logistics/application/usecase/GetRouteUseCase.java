@@ -13,14 +13,15 @@ import java.util.Optional;
 public class GetRouteUseCase {
 
     private final RouteRepositoryPort routeRepository;
+    private final RouteMapper routeMapper;
 
     public Optional<RouteResponse> findById(String routeId) {
         log.info("[get-route] Fetching route by id {}", routeId);
-        return routeRepository.findById(routeId).map(RouteMapper.INSTANCE::toResponse);
+        return routeRepository.findById(routeId).map(routeMapper::toResponse);
     }
 
     public Optional<RouteResponse> findByPackageId(String packageId) {
         log.info("[get-route] Fetching route by packageId {}", packageId);
-        return routeRepository.findByPackageId(packageId).map(RouteMapper.INSTANCE::toResponse);
+        return routeRepository.findByPackageId(packageId).map(routeMapper::toResponse);
     }
 }

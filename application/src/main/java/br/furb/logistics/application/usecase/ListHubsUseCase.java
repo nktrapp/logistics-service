@@ -13,12 +13,13 @@ import java.util.List;
 public class ListHubsUseCase {
 
     private final HubRepositoryPort hubRepository;
+    private final HubMapper hubMapper;
 
     public List<HubResponse> execute() {
         log.info("[list-hubs] Listing all hubs");
 
         return hubRepository.findAll().stream()
-                .map(HubMapper.INSTANCE::toResponse)
+                .map(hubMapper::toResponse)
                 .toList();
     }
 }

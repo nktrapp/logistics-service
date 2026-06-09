@@ -15,6 +15,7 @@ public class RegisterHubConnectionUseCase {
 
     private final HubConnectionRepositoryPort hubConnectionRepository;
     private final HubRepositoryPort hubRepository;
+    private final HubConnectionMapper hubConnectionMapper;
 
     public HubConnection execute(RegisterConnectionCommand command) {
         log.info("[register-connection] Connecting hub {} to hub {}", command.originHubId(), command.destinationHubId());
@@ -25,7 +26,7 @@ public class RegisterHubConnectionUseCase {
         hubRepository.findById(command.destinationHubId())
                 .orElseThrow(() -> new HubNotFoundException(command.destinationHubId()));
 
-        HubConnection connection = HubConnectionMapper.INSTANCE.toDomain(command);
+        HubConnection connection = hubConnectionMapper.toDomain(command);
 
         HubConnection saved = hubConnectionRepository.save(connection);
 
