@@ -61,3 +61,8 @@ graalvmNative {
 springBoot {
     buildInfo()
 }
+
+tasks.named('test') {
+    dependsOn 'processAot'
+    systemProperty 'aot.sources.dir', layout.buildDirectory.dir('generated/aotSources').get().asFile.absolutePath
+}
