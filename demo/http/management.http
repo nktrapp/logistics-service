@@ -1,0 +1,12 @@
+### Fluxo: observabilidade (Actuator)
+
+@baseUrl = http://localhost:8082
+
+### Health (mostra mongo + redis)
+GET {{baseUrl}}/management/health
+
+### Lista de metricas disponiveis
+GET {{baseUrl}}/management/metrics
+
+### Exemplo de metrica pontual
+GET {{baseUrl}}/management/metrics/jvm.memory.used
