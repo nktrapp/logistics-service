@@ -1,0 +1,44 @@
+name: Native Check
+
+# Native-image build gate. native-image compilation is slow and resource-heavy, so
+# it does NOT run on every PR — the cheap per-PR guard against AOT bean pruning lives
+# in the normal `build` (the `test` task depends on `processAot`, see ci.yml). This
+# workflow catches native-only failures (missing reflection/resource hints, GraalVM
+# incompatibilities) that only surface at `native-image` link time.
+#
+# Manual by default (cost-safe on free tier). Uncomment the schedule for an unattended
+# nightly run.
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 4 * * *'  # 04:00 UTC nightly
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-compile:
+    name: Native image compiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: graalvm
+          java-version: '25'
+          native-image-job-reports: true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Compile native image (Spring AOT + native-image)
+        run: ./gradlew :application:nativeCompile --no-daemon
