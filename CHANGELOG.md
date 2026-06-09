@@ -1,3 +1,11 @@
+## [1.5.3](https://github.com/nktrapp/logistics-service/compare/v1.5.2...v1.5.3) (2026-06-09)
+
+
+### Bug Fixes
+
+* compatibiliza a imagem nativa GraalVM com o ambiente local ([9fd7dcb](https://github.com/nktrapp/logistics-service/commit/9fd7dcbaec7814df4687428930d34cb4915fd1c0))
+* exporta traces OTLP para o ADOT/X-Ray ([88f16e3](https://github.com/nktrapp/logistics-service/commit/88f16e3aae5b9dd7b6fce919aa0201ff7643100a))
+
 ## [1.5.2](https://github.com/nktrapp/logistics-service/compare/v1.5.1...v1.5.2) (2026-06-09)
 
 
