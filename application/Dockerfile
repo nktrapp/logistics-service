@@ -21,7 +21,7 @@ COPY application application
 RUN ./gradlew :application:nativeCompile -x test --no-daemon
 
 
-FROM gcr.io/distroless/base-debian12:nonroot
+FROM gcr.io/distroless/base-debian12:debug-nonroot
 
 WORKDIR /app
 

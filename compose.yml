@@ -100,11 +100,11 @@ services:
       terraform-contracts:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/management/health/liveness"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/management/health/liveness"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 20s
 
   package-service:
     #image: 934347069710.dkr.ecr.us-east-1.amazonaws.com/furb-logistics/package-service:1.2.0
@@ -128,11 +128,11 @@ services:
       terraform-contracts:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/management/health/liveness"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/management/health/liveness"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 20s
 
   mongo-express:
     image: mongo-express:1.0

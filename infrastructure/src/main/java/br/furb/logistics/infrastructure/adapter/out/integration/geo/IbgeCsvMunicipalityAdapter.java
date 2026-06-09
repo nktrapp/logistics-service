@@ -3,6 +3,9 @@ package br.furb.logistics.infrastructure.adapter.out.integration.geo;
 import br.furb.logistics.domain.model.Coordinates;
 import br.furb.logistics.domain.port.MunicipalityGeocodingPort;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.RuntimeHintsRegistrar;
+import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -24,9 +27,17 @@ import java.util.Optional;
  */
 @Slf4j
 @Component
+@ImportRuntimeHints(IbgeCsvMunicipalityAdapter.GeoResourceHints.class)
 public class IbgeCsvMunicipalityAdapter implements MunicipalityGeocodingPort {
 
     private static final String CSV_RESOURCE = "geo/municipios.csv";
+
+    static class GeoResourceHints implements RuntimeHintsRegistrar {
+        @Override
+        public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+            hints.resources().registerPattern(CSV_RESOURCE);
+        }
+    }
 
     private static final Map<String, String> UF_BY_IBGE_CODE = Map.ofEntries(
             Map.entry("11", "RO"), Map.entry("12", "AC"), Map.entry("13", "AM"), Map.entry("14", "RR"),

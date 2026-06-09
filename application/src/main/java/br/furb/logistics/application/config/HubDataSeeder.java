@@ -7,7 +7,7 @@ import br.furb.logistics.domain.port.HubRepositoryPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -17,18 +17,24 @@ import java.math.BigDecimal;
  * Roda apenas no perfil "local" e é idempotente: só semeia quando ainda não há hubs.
  * Os hubs são gravados com cidade/estado explícitos (sem consultar o ViaCEP), mas usando
  * cidades reais para que os CEPs dos pacotes resolvam para os mesmos municípios via ViaCEP.
+ * O profile é verificado em runtime (e não via @Profile) porque, na imagem nativa, as
+ * condições de @Profile são avaliadas em build-time do AOT e o bean seria podado.
  */
 @Slf4j
 @Component
-@Profile("local")
 @RequiredArgsConstructor
 public class HubDataSeeder implements CommandLineRunner {
 
     private final HubRepositoryPort hubRepository;
     private final HubConnectionRepositoryPort hubConnectionRepository;
+    private final Environment environment;
 
     @Override
     public void run(String... args) {
+        if (!environment.matchesProfiles("local")) {
+            return;
+        }
+
         if (!hubRepository.findAllActive().isEmpty()) {
             log.info("[seed] Hubs já cadastrados — seeding ignorado");
             return;

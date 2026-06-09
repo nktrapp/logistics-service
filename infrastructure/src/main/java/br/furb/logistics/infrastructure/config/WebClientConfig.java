@@ -1,5 +1,6 @@
 package br.furb.logistics.infrastructure.config;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,11 +17,12 @@ public class WebClientConfig {
     private int timeoutMs;
 
     @Bean
-    public RestClient restClient(RestClient.Builder restClientBuilder) {
+    public RestClient restClient(ObjectProvider<RestClient.Builder> restClientBuilderProvider) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeoutMs);
         requestFactory.setReadTimeout(timeoutMs);
 
+        RestClient.Builder restClientBuilder = restClientBuilderProvider.getIfAvailable(RestClient::builder);
         return restClientBuilder
                 .baseUrl(viaCepBaseUrl)
                 .requestFactory(requestFactory)
