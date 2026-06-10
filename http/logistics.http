@@ -3,7 +3,7 @@
 # Porta local: 8082. Execute as requisições de cima para baixo.
 # Observação: no perfil "local" o HubDataSeeder já cria um grafo padrão de hubs.
 ###############################################################################
-@host = http://localhost:8082
+@host = http://furb-logistics-prod-alb-2133099297.us-east-1.elb.amazonaws.com
 
 ### [Health] Serviço no ar
 GET {{host}}/management/health

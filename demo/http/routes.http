@@ -1,9 +1,0 @@
-### Fluxo: consulta de rotas
-### Rotas sao criadas por evento (package.created via SQS), nao por REST.
-### Veja demo/flows/01-outbox.md para gerar uma rota; pegue o id no Mongo:
-###   db.routes.find({}, {packageId:1, originHubId:1, destinationHubId:1}).sort({createdAt:-1})
-
-@baseUrl = http://localhost:8082
-
-### Buscar rota por id
-GET {{baseUrl}}/api/v1/routes/REPLACE_ROUTE_ID
