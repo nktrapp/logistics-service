@@ -3,8 +3,12 @@ package br.furb.logistics.infrastructure.adapter.out.persistence.repository;
 import br.furb.logistics.domain.port.InboxRepositoryPort;
 import br.furb.logistics.infrastructure.adapter.out.persistence.document.InboxDocument;
 import br.furb.logistics.infrastructure.adapter.out.persistence.repository.mongo.InboxMongoRepository;
+import com.mongodb.client.result.UpdateResult;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -14,20 +18,30 @@ import java.time.Instant;
 public class MongoInboxRepositoryAdapter implements InboxRepositoryPort {
 
     private final InboxMongoRepository mongoRepository;
+    private final MongoTemplate mongoTemplate;
 
     @Override
     public boolean existsByEventId(String eventId) {
         return mongoRepository.existsByEventId(eventId);
     }
 
+    /**
+     * Idempotent claim implemented as an upsert with $setOnInsert: an insert failure
+     * (DuplicateKeyException) inside a MongoDB transaction aborts the whole transaction
+     * even if caught, making the commit fail on redelivery of an already-processed event.
+     * The upsert matches the existing document instead of erroring, so the surrounding
+     * transaction stays healthy and the duplicate is acked instead of retried to the DLQ.
+     */
     @Override
     public boolean saveIfAbsent(String eventId, String eventType) {
-        try {
-            save(eventId, eventType);
-            return true;
-        } catch (DuplicateKeyException e) {
-            return false;
-        }
+        Query query = Query.query(Criteria.where("eventId").is(eventId));
+        Update update = new Update()
+                .setOnInsert("eventId", eventId)
+                .setOnInsert("eventType", eventType)
+                .setOnInsert("receivedAt", Instant.now());
+
+        UpdateResult result = mongoTemplate.upsert(query, update, InboxDocument.class);
+        return result.getUpsertedId() != null;
     }
 
     @Override

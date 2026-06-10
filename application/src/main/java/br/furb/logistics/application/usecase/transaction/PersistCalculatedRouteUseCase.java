@@ -24,6 +24,7 @@ public class PersistCalculatedRouteUseCase {
     @Transactional
     public Route execute(String eventId,
                          String packageId,
+                         String destinationCep,
                          Route route,
                          Hub originHub,
                          Hub destinationHub,
@@ -35,7 +36,7 @@ public class PersistCalculatedRouteUseCase {
         }
 
         Route saved = routeRepository.save(route);
-        outboxRepository.save(buildCalculatedEvent(saved, packageId, originHub, destinationHub, hops, result));
+        outboxRepository.save(buildCalculatedEvent(saved, packageId, destinationCep, originHub, destinationHub, hops, result));
 
         log.info("[calculate-route] Route {} calculated for package {}", saved.getId(), packageId);
         return saved;
@@ -43,6 +44,7 @@ public class PersistCalculatedRouteUseCase {
 
     private RouteCalculatedEvent buildCalculatedEvent(Route saved,
                                                       String packageId,
+                                                      String destinationCep,
                                                       Hub originHub,
                                                       Hub destinationHub,
                                                       List<Route.RouteHop> hops,
@@ -58,6 +60,7 @@ public class PersistCalculatedRouteUseCase {
         return RouteCalculatedEvent.builder()
                 .payload(RouteCalculatedEvent.Payload.builder()
                         .packageId(packageId)
+                        .destinationCep(destinationCep)
                         .routeId(saved.getId())
                         .originHub(RouteCalculatedEvent.HubInfo.builder()
                                 .id(originHub.getId())

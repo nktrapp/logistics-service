@@ -121,7 +121,7 @@ class CalculateRouteUseCaseTest {
                 .status(RouteStatus.CALCULATED)
                 .createdAt(Instant.parse("2026-05-31T10:00:00Z"))
                 .build();
-        when(persistCalculatedRouteUseCase.execute(any(), any(), any(Route.class), any(Hub.class), any(Hub.class), any(), any()))
+        when(persistCalculatedRouteUseCase.execute(any(), any(), any(), any(Route.class), any(Hub.class), any(Hub.class), any(), any()))
                 .thenReturn(saved);
 
         RouteResponse response = useCase.execute("event-1", "pkg-1", "89010000", "89200000");
@@ -129,7 +129,7 @@ class CalculateRouteUseCaseTest {
         assertThat(response).isNotNull();
         ArgumentCaptor<Route> routeCaptor = ArgumentCaptor.forClass(Route.class);
         verify(persistCalculatedRouteUseCase).execute(
-                eq("event-1"), eq("pkg-1"), routeCaptor.capture(), any(Hub.class), any(Hub.class), any(), eq(result));
+                eq("event-1"), eq("pkg-1"), eq("89200000"), routeCaptor.capture(), any(Hub.class), any(Hub.class), any(), eq(result));
         Route built = routeCaptor.getValue();
         assertThat(built.getStatus()).isEqualTo(RouteStatus.CALCULATED);
         assertThat(built.getPackageId()).isEqualTo("pkg-1");
@@ -151,7 +151,7 @@ class CalculateRouteUseCaseTest {
         assertThat(response).isNull();
         verify(persistFailedRouteUseCase).execute(eq("event-1"), eq("package.created"), eq("pkg-1"), anyString());
         verify(persistCalculatedRouteUseCase, never())
-                .execute(any(), any(), any(), any(), any(), any(), any());
+                .execute(any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -171,7 +171,7 @@ class CalculateRouteUseCaseTest {
         assertThat(response).isNull();
         verify(persistFailedRouteUseCase).execute(eq("event-1"), eq("package.created"), eq("pkg-1"), anyString());
         verify(persistCalculatedRouteUseCase, never())
-                .execute(any(), any(), any(), any(), any(), any(), any());
+                .execute(any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     private Hub buildHub(String id, String name, String city, String state) {
