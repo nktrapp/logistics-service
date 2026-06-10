@@ -1,0 +1,37 @@
+###############################################################################
+# resilience-lab — 00: health dos dois serviços
+# Portas fixadas pelo compose.lab.yml: package-service :8081, logistics-service :8082.
+# IntelliJ HTTP Client: selecione o ambiente "lab" (requests/http-client.env.json).
+# VS Code REST Client: as variáveis @... abaixo já apontam para os mesmos hosts.
+#
+# Estes arquivos cobrem só a superfície HTTP do lab. Os passos que vivem no SQS
+# (duplicata com mesmo dedup-id, mensagem poison, evento stale forjado) não são
+# expressáveis em .http — ver scenarios/*.sh.
+###############################################################################
+@packageHost = http://localhost:8081
+@logisticsHost = http://localhost:8082
+
+### [package-service] Health agregado
+GET {{packageHost}}/management/health
+
+### [package-service] Liveness (probe usada pelo lab em wait_healthy)
+GET {{packageHost}}/management/health/liveness
+
+### [package-service] Readiness
+GET {{packageHost}}/management/health/readiness
+
+### [logistics-service] Health agregado
+GET {{logisticsHost}}/management/health
+
+### [logistics-service] Liveness
+GET {{logisticsHost}}/management/health/liveness
+
+### [logistics-service] Readiness
+GET {{logisticsHost}}/management/health/readiness
+
+### [observabilidade] Gauge de eventos FAILED na outbox do package-service
+# outbox.failed.count > 0 = evento esgotou os retries de publicação (intervenção manual)
+GET {{packageHost}}/management/metrics/outbox.failed.count
+
+### [observabilidade] Idem no logistics-service
+GET {{logisticsHost}}/management/metrics/outbox.failed.count

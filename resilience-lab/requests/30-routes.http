@@ -1,0 +1,30 @@
+###############################################################################
+# resilience-lab — 30: consulta de rotas (logistics-service :8082)
+# A Route do logistics-service é a SOURCE OF TRUTH; o routeInfo dentro do pacote
+# (package-service) é uma projeção eventualmente consistente dela — comparar as
+# duas respostas é a verificação manual da convergência (cenário 01).
+# Pré-requisito: um pacote roteado — use {{labPackageId}} de 20-packages.http,
+# ou cole um id manualmente. IntelliJ: ambiente "lab".
+#
+# A injeção de route.calculated forjado/stale acontece via SQS, não via esta API
+# (que é somente leitura) — ver scenarios/04-stale-route.sh.
+###############################################################################
+@logisticsHost = http://localhost:8082
+
+### [Feliz] Rota por packageId (a fonte da verdade para "qual é a rota do pacote?")
+# @name labRota
+GET {{logisticsHost}}/api/v1/routes?packageId={{labPackageId}}
+
+> {% client.global.set("labRouteId", response.body.id); %}
+
+### [Feliz] Rota por id
+GET {{logisticsHost}}/api/v1/routes/{{labRouteId}}
+
+### [Falha 400] Consulta sem o parâmetro obrigatório packageId
+GET {{logisticsHost}}/api/v1/routes
+
+### [Falha 404] Rota de pacote inexistente
+GET {{logisticsHost}}/api/v1/routes?packageId=pacote-inexistente
+
+### [Falha 404] Rota por id inexistente
+GET {{logisticsHost}}/api/v1/routes/rota-inexistente

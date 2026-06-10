@@ -1,0 +1,105 @@
+###############################################################################
+# resilience-lab — 20: ciclo de vida do pacote (package-service :8081)
+# A roteirização é ASSÍNCRONA (janela nominal ~2–6s): após criar/alterar, aguarde
+# e reconsulte até o status virar ROUTE_CALCULATED. Execute de cima para baixo.
+# IntelliJ: ambiente "lab" (requests/http-client.env.json).
+#
+# Os caos do lab que passam pelo SQS (reentrega do mesmo eventId, route.calculated
+# forjado com destinationCep antigo, mensagem poison) não são expressáveis em
+# .http — são os scripts scenarios/02..05. Aqui fica só a parte HTTP dos fluxos.
+###############################################################################
+@packageHost = http://localhost:8081
+
+### [Feliz] Criar pacote Blumenau (89010000) → Joinville (89201000) — ambos com hub no seeder
+# @name labPacote
+POST {{packageHost}}/api/v1/packages
+Content-Type: application/json
+
+{
+  "senderCep": "89010000",
+  "recipientCep": "89201000",
+  "weight": 2.5,
+  "description": "resilience-lab: fluxo feliz"
+}
+
+> {% client.global.set("labPackageId", response.body.id); %}
+
+### [Feliz] Consultar (repita até status = ROUTE_CALCULATED, com routeInfo preenchido)
+GET {{packageHost}}/api/v1/packages/{{labPackageId}}
+
+### [Feliz] Listar pacotes
+GET {{packageHost}}/api/v1/packages
+
+### [Feliz] Filtrar por status
+GET {{packageHost}}/api/v1/packages?status=ROUTE_CALCULATED
+
+# ─────────── Mudança de destino (base do cenário 04-stale-route) ───────────
+
+### [Feliz] Mudar o destino para São Paulo (01310100) — pacote volta a ROUTE_PENDING
+# e, após o recálculo assíncrono, retorna a ROUTE_CALCULATED com a rota nova.
+# É neste intervalo que o cenário 04 injeta o route.calculated stale via SQS.
+PATCH {{packageHost}}/api/v1/packages/{{labPackageId}}/destination
+Content-Type: application/json
+
+{ "newCep": "01310100" }
+
+### Reconsultar (aguarde ~2–6s; recipientCep = 01310100, rota recalculada)
+GET {{packageHost}}/api/v1/packages/{{labPackageId}}
+
+# ─────────────────────── Avanço de status ───────────────────────
+
+### [Feliz] ROUTE_CALCULATED → IN_TRANSIT (só após a rota calculada)
+PATCH {{packageHost}}/api/v1/packages/{{labPackageId}}/status
+Content-Type: application/json
+
+{ "packageId": "{{labPackageId}}", "newStatus": "IN_TRANSIT" }
+
+### [Feliz] IN_TRANSIT → DELIVERED (estado terminal — nada transiciona a partir dele)
+PATCH {{packageHost}}/api/v1/packages/{{labPackageId}}/status
+Content-Type: application/json
+
+{ "packageId": "{{labPackageId}}", "newStatus": "DELIVERED" }
+
+# ─────────────────── Falhas conhecidas (tratadas) ───────────────────
+
+### [Falha 400] CEP inválido (menos de 8 dígitos)
+POST {{packageHost}}/api/v1/packages
+Content-Type: application/json
+
+{ "senderCep": "123", "recipientCep": "89201000", "weight": 2.5 }
+
+### [Falha 400] Peso não positivo
+POST {{packageHost}}/api/v1/packages
+Content-Type: application/json
+
+{ "senderCep": "89010000", "recipientCep": "89201000", "weight": 0 }
+
+### [Falha 400] Campo obrigatório ausente (recipientCep)
+POST {{packageHost}}/api/v1/packages
+Content-Type: application/json
+
+{ "senderCep": "89010000", "weight": 2.5 }
+
+### Pacote para os testes de transição inválida
+# @name labPacoteInvalido
+POST {{packageHost}}/api/v1/packages
+Content-Type: application/json
+
+{ "senderCep": "89010000", "recipientCep": "89201000", "weight": 1.0, "description": "resilience-lab: transicao invalida" }
+
+> {% client.global.set("labPkgInvalido", response.body.id); %}
+
+### [Falha 422] Transição inválida: pulo direto para DELIVERED (invariante I1 na borda HTTP)
+PATCH {{packageHost}}/api/v1/packages/{{labPkgInvalido}}/status
+Content-Type: application/json
+
+{ "packageId": "{{labPkgInvalido}}", "newStatus": "DELIVERED" }
+
+### [Falha 400] Corpo sem packageId (validação exige packageId + newStatus)
+PATCH {{packageHost}}/api/v1/packages/{{labPkgInvalido}}/status
+Content-Type: application/json
+
+{ "newStatus": "IN_TRANSIT" }
+
+### [Falha 404] Pacote inexistente
+GET {{packageHost}}/api/v1/packages/000000000000000000000000
