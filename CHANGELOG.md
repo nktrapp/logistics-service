@@ -1,3 +1,15 @@
+# [1.6.0](https://github.com/nktrapp/logistics-service/compare/v1.5.4...v1.6.0) (2026-06-10)
+
+
+### Bug Fixes
+
+* blinda mensageria contra eventos stale, duplicatas e inversao de ordem ([c94d5b6](https://github.com/nktrapp/logistics-service/commit/c94d5b6cb83464526355cc02daeb2cd8cf2adc23))
+
+
+### Features
+
+* adiciona resilience-lab — laboratorio de caos e invariantes (Jepsen-lite) ([5b94d58](https://github.com/nktrapp/logistics-service/commit/5b94d5810e6a1526bd4241c6733b863671733cc7))
+
 ## [1.5.4](https://github.com/nktrapp/logistics-service/compare/v1.5.3...v1.5.4) (2026-06-09)
 
 
