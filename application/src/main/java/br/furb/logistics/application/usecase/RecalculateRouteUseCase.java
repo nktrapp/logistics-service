@@ -93,6 +93,7 @@ public class RecalculateRouteUseCase {
             persistRecalculatedRouteUseCase.execute(
                     eventId,
                     packageId,
+                    newRecipientCep,
                     route,
                     originHub,
                     destinationHub,

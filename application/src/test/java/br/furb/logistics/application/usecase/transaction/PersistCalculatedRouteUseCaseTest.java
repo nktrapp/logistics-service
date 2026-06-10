@@ -51,7 +51,7 @@ class PersistCalculatedRouteUseCaseTest {
         when(inboxRepository.saveIfAbsent("event-1", "package.created")).thenReturn(true);
         when(routeRepository.save(route)).thenReturn(route);
 
-        Route saved = useCase.execute("event-1", "pkg-1", route, originHub, destinationHub, hops, result);
+        Route saved = useCase.execute("event-1", "pkg-1", "89200000", route, originHub, destinationHub, hops, result);
 
         assertThat(saved).isEqualTo(route);
         ArgumentCaptor<DomainEvent> eventCaptor = ArgumentCaptor.forClass(DomainEvent.class);
@@ -59,6 +59,7 @@ class PersistCalculatedRouteUseCaseTest {
         assertThat(eventCaptor.getValue()).isInstanceOf(RouteCalculatedEvent.class);
         RouteCalculatedEvent event = (RouteCalculatedEvent) eventCaptor.getValue();
         assertThat(event.getPayload().getPackageId()).isEqualTo("pkg-1");
+        assertThat(event.getPayload().getDestinationCep()).isEqualTo("89200000");
         assertThat(event.getPayload().getRouteId()).isEqualTo("route-1");
         assertThat(event.getPayload().getTotalDistanceKm()).isEqualTo(50.0);
     }
@@ -69,7 +70,7 @@ class PersistCalculatedRouteUseCaseTest {
         PersistCalculatedRouteUseCase useCase = new PersistCalculatedRouteUseCase(routeRepository, outboxRepository, inboxRepository);
         when(inboxRepository.saveIfAbsent("event-1", "package.created")).thenReturn(false);
 
-        Route saved = useCase.execute("event-1", "pkg-1", buildRoute(),
+        Route saved = useCase.execute("event-1", "pkg-1", "89200000", buildRoute(),
                 buildHub("origin-1", "Origin", "Blumenau", "SC"),
                 buildHub("dest-1", "Dest", "Joinville", "SC"),
                 List.of(), new RouteCalculationService.RouteResult(List.of(), 0.0, 0));

@@ -103,8 +103,13 @@ public class OutboxRelaySchedulerAdapter {
             MDC.put("eventId", entry.eventId());
             MDC.put("eventType", entry.eventType());
             try {
-                String envelope = buildEnvelope(entry);
                 String groupId = entry.groupId() != null ? entry.groupId() : entry.eventId();
+                if (outboxRepository.existsEarlierUnpublished(groupId, entry.createdAt(), entry.id())) {
+                    outboxRepository.releaseClaim(entry.eventId(), Instant.now().plusMillis(retryDelayMs));
+                    log.debug("[outbox-relay] Event {} deferred: earlier event of group {} not yet published", entry.eventId(), groupId);
+                    return;
+                }
+                String envelope = buildEnvelope(entry);
                 eventPublisherPort.publish(targetQueue, envelope, groupId, entry.eventId());
                 outboxRepository.markAsPublished(entry.eventId(), Instant.now());
                 log.debug("[outbox-relay] Event {} published successfully", entry.eventId());

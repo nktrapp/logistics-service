@@ -53,6 +53,7 @@ class OutboxRelaySchedulerAdapterTest {
         void shouldPublishAndMarkAsPublishedWhenRelaySucceeds() {
             OutboxRelaySchedulerAdapter scheduler = buildScheduler();
             OutboxEntry entry = new OutboxEntry(
+                    "65f000000000000000000001",
                     "event-1",
                     "route.calculated",
                     "{\"packageId\":\"pkg-1\"}",
@@ -87,6 +88,7 @@ class OutboxRelaySchedulerAdapterTest {
         void shouldScheduleRetryWhenPublishingFails() {
             OutboxRelaySchedulerAdapter scheduler = buildScheduler();
             OutboxEntry entry = new OutboxEntry(
+                    "65f000000000000000000001",
                     "event-1",
                     "route.calculated",
                     "{\"packageId\":\"pkg-1\"}",
@@ -115,6 +117,7 @@ class OutboxRelaySchedulerAdapterTest {
         void shouldUseExponentialBackoffForRetryDelay() {
             OutboxRelaySchedulerAdapter scheduler = buildScheduler();
             OutboxEntry entry = new OutboxEntry(
+                    "65f000000000000000000001",
                     "event-1",
                     "route.calculated",
                     "{\"packageId\":\"pkg-1\"}",
@@ -148,6 +151,7 @@ class OutboxRelaySchedulerAdapterTest {
         void shouldCapExponentialBackoffDelay() {
             OutboxRelaySchedulerAdapter scheduler = buildScheduler();
             OutboxEntry entry = new OutboxEntry(
+                    "65f000000000000000000001",
                     "event-1",
                     "route.calculated",
                     "{\"packageId\":\"pkg-1\"}",
@@ -178,6 +182,90 @@ class OutboxRelaySchedulerAdapterTest {
     }
 
     @Nested
+    @DisplayName("Per-group ordering")
+    class PerGroupOrdering {
+
+        @Test
+        @DisplayName("Given an earlier unpublished sibling of the same group, should release the claim without publishing or retrying")
+        void shouldReleaseClaimWhenEarlierSiblingIsUnpublished() {
+            OutboxRelaySchedulerAdapter scheduler = buildScheduler();
+            OutboxEntry entry = new OutboxEntry(
+                    "65f000000000000000000002",
+                    "event-2",
+                    "route.calculated",
+                    "{\"packageId\":\"pkg-1\"}",
+                    "pkg-1",
+                    traceparent(),
+                    null,
+                    Instant.parse("2026-05-31T10:00:00Z"),
+                    0
+            );
+            when(outboxRepository.claimPending(eq(10), argThat(Objects::nonNull), argThat(Objects::nonNull)))
+                    .thenReturn(List.of(entry));
+            when(outboxRepository.existsEarlierUnpublished(eq("pkg-1"), eq(Instant.parse("2026-05-31T10:00:00Z")), eq("65f000000000000000000002")))
+                    .thenReturn(true);
+
+            scheduler.relay();
+
+            verify(outboxRepository).releaseClaim(eq("event-2"), any(Instant.class));
+            verify(eventPublisherPort, never()).publish(any(), any(), any(), any());
+            verify(outboxRepository, never()).markAsPublished(any(), any(Instant.class));
+            verify(outboxRepository, never()).markForRetry(any(), any(), any(Instant.class), anyInt());
+        }
+
+        @Test
+        @DisplayName("Given an entry without groupId, should run the ordering check using the eventId as group")
+        void shouldUseEventIdAsGroupForOrderingCheckWhenGroupIdIsNull() {
+            OutboxRelaySchedulerAdapter scheduler = buildScheduler();
+            OutboxEntry entry = new OutboxEntry(
+                    "65f000000000000000000003",
+                    "event-3",
+                    "route.calculated",
+                    "{\"packageId\":\"pkg-1\"}",
+                    null,
+                    traceparent(),
+                    null,
+                    Instant.parse("2026-05-31T10:00:00Z"),
+                    0
+            );
+            when(outboxRepository.claimPending(eq(10), argThat(Objects::nonNull), argThat(Objects::nonNull)))
+                    .thenReturn(List.of(entry));
+
+            scheduler.relay();
+
+            verify(outboxRepository).existsEarlierUnpublished(eq("event-3"), eq(Instant.parse("2026-05-31T10:00:00Z")), eq("65f000000000000000000003"));
+        }
+
+        @Test
+        @DisplayName("Given a failure in the ordering check itself, should fall back to the retry path without publishing")
+        void shouldScheduleRetryWhenOrderingCheckFails() {
+            OutboxRelaySchedulerAdapter scheduler = buildScheduler();
+            OutboxEntry entry = new OutboxEntry(
+                    "65f000000000000000000004",
+                    "event-4",
+                    "route.calculated",
+                    "{\"packageId\":\"pkg-1\"}",
+                    "pkg-1",
+                    traceparent(),
+                    null,
+                    Instant.parse("2026-05-31T10:00:00Z"),
+                    0
+            );
+            when(outboxRepository.claimPending(eq(10), argThat(Objects::nonNull), argThat(Objects::nonNull)))
+                    .thenReturn(List.of(entry));
+            when(outboxRepository.existsEarlierUnpublished(eq("pkg-1"), eq(Instant.parse("2026-05-31T10:00:00Z")), eq("65f000000000000000000004")))
+                    .thenThrow(new RuntimeException("check failed"));
+            when(outboxRepository.markForRetry(eq("event-4"), eq("check failed"), argThat(Objects::nonNull), eq(5)))
+                    .thenReturn(new RetryOutcome(true, 1));
+
+            scheduler.relay();
+
+            verify(outboxRepository).markForRetry(eq("event-4"), eq("check failed"), argThat(Objects::nonNull), eq(5));
+            verify(eventPublisherPort, never()).publish(any(), any(), any(), any());
+        }
+    }
+
+    @Nested
     @DisplayName("Queue routing")
     class QueueRouting {
 
@@ -185,7 +273,7 @@ class OutboxRelaySchedulerAdapterTest {
         @DisplayName("Given a route.* event, should publish to the outbound (logistics) queue")
         void shouldRouteRouteEventsToOutboundQueue() {
             OutboxRelaySchedulerAdapter scheduler = buildScheduler();
-            OutboxEntry entry = new OutboxEntry("event-1", "route.calculated", "{\"packageId\":\"pkg-1\"}",
+            OutboxEntry entry = new OutboxEntry("65f000000000000000000001", "event-1", "route.calculated", "{\"packageId\":\"pkg-1\"}",
                     "pkg-1", traceparent(), null, Instant.parse("2026-05-31T10:00:00Z"), 0);
             when(outboxRepository.claimPending(eq(10), argThat(Objects::nonNull), argThat(Objects::nonNull)))
                     .thenReturn(List.of(entry));
@@ -199,7 +287,7 @@ class OutboxRelaySchedulerAdapterTest {
         @DisplayName("Given a hub.* event, should publish to the dedicated internal hub-events queue")
         void shouldRouteHubEventsToHubQueue() {
             OutboxRelaySchedulerAdapter scheduler = buildScheduler();
-            OutboxEntry entry = new OutboxEntry("event-2", "hub.created", "{\"hubId\":\"hub-1\"}",
+            OutboxEntry entry = new OutboxEntry("65f000000000000000000002", "event-2", "hub.created", "{\"hubId\":\"hub-1\"}",
                     "hub-1", traceparent(), null, Instant.parse("2026-05-31T10:00:00Z"), 0);
             when(outboxRepository.claimPending(eq(10), argThat(Objects::nonNull), argThat(Objects::nonNull)))
                     .thenReturn(List.of(entry));

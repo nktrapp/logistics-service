@@ -83,6 +83,7 @@ public class CalculateRouteUseCase {
             Route saved = persistCalculatedRouteUseCase.execute(
                     eventId,
                     packageId,
+                    recipientCep,
                     route,
                     originHub,
                     destinationHub,

@@ -24,5 +24,7 @@ public class InboxDocument {
     private String eventId;
 
     private String eventType;
+
+    @Indexed(expireAfter = "30d")
     private Instant receivedAt;
 }

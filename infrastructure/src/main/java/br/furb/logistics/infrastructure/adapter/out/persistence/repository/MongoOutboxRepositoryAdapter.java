@@ -9,6 +9,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -141,6 +142,29 @@ public class MongoOutboxRepositoryAdapter implements OutboxRepositoryPort {
         return mongoTemplate.count(Query.query(Criteria.where("status").is(STATUS_FAILED)), OutboxDocument.class);
     }
 
+    @Override
+    public boolean existsEarlierUnpublished(String groupId, Instant createdAt, String outboxId) {
+        Criteria earlierByTime = Criteria.where("createdAt").lt(createdAt);
+        Criteria sameTimeSmallerId = new Criteria().andOperator(
+                Criteria.where("createdAt").is(createdAt),
+                Criteria.where("_id").lt(new ObjectId(outboxId)));
+        Criteria blockerCriteria = new Criteria().andOperator(
+                Criteria.where("groupId").is(groupId),
+                Criteria.where("status").in(STATUS_PENDING, STATUS_IN_PROGRESS, STATUS_FAILED),
+                new Criteria().orOperator(earlierByTime, sameTimeSmallerId));
+        return mongoTemplate.exists(new Query(blockerCriteria), OutboxDocument.class);
+    }
+
+    @Override
+    public void releaseClaim(String eventId, Instant nextAttemptAt) {
+        Query query = Query.query(Criteria.where("eventId").is(eventId).and("status").is(STATUS_IN_PROGRESS));
+        Update update = new Update()
+                .set("status", STATUS_PENDING)
+                .set("nextAttemptAt", nextAttemptAt)
+                .unset("processingStartedAt");
+        mongoTemplate.updateFirst(query, update, OutboxDocument.class);
+    }
+
     private Optional<OutboxEntry> claimNext(Instant claimedAt, Instant retryTimedOutBefore) {
         Criteria pendingCriteria = new Criteria().andOperator(
                 Criteria.where("status").is(STATUS_PENDING),
@@ -175,6 +199,7 @@ public class MongoOutboxRepositoryAdapter implements OutboxRepositoryPort {
 
         int retryCount = claimedDocument.getRetryCount() == null ? 0 : claimedDocument.getRetryCount();
         return Optional.of(new OutboxEntry(
+                claimedDocument.getId(),
                 claimedDocument.getEventId(),
                 claimedDocument.getEventType(),
                 claimedDocument.getPayload(),

@@ -113,6 +113,38 @@ Garantias: **outbox** (publicação atômica + retry) e **inbox** (idempotência
 
 ---
 
+## Garantias e trade-offs de mensageria
+
+- **Entrega e duplicatas:** o sistema é **at-least-once**, nunca exactly-once. Três camadas
+  absorvem duplicatas: dedup do SQS FIFO (`MessageDeduplicationId = eventId`, janela de 5 min)
+  → **inbox** transacional (upsert `$setOnInsert` por `eventId`, na mesma transação Mongo da
+  escrita da rota) → máquina de estados do agregado. O inbox usa **upsert** (e não insert +
+  catch de duplicata) porque um erro de escrita dentro de transação Mongo aborta a transação
+  inteira; com upsert, a reentrega de evento já processado é confirmada (ACK) silenciosamente.
+  Registros do inbox expiram por índice TTL em **30 dias** (> retenção da fila 4 d + DLQ 14 d).
+- **Invariante eventual:** o pacote converge para uma rota compatível com seu destino atual.
+  Por isso `route.calculated`/`route.recalculated` carregam **`destinationCep`** (o CEP para o
+  qual a rota foi calculada): é o que permite ao `package-service` descartar eventos
+  causalmente obsoletos. Evento _stale_ é fato esperado do modelo assíncrono, não erro.
+- **Janela de inconsistência:** nominal **~2–6 s** (relay do outbox ≤ 2 s + SQS + consumo).
+  Sob falha, limitada por `maxReceiveCount × visibilityTimeout = 3 × 60 s` (retry de consumo),
+  14 dias (DLQ) ou intervenção manual (outbox `FAILED`).
+- **Ordem por agregado:** o relay do outbox **não publica o evento N+1** de um
+  `MessageGroupId` enquanto o evento N não estiver `PUBLISHED` (verificação por `createdAt`,
+  desempate por `_id`; o deferimento devolve a entrada a `PENDING` sem contar retry). Decisão
+  deliberada: um evento `FAILED` (5 tentativas esgotadas) **bloqueia o grupo** até replay
+  manual — consistência de ordem acima de _liveness_ do grupo. Replay manual = resetar o
+  documento do outbox para `PENDING`.
+- **Erro no consumo:** transitório (banco/rede, ViaCEP fora) → exceção → reentrega pelo SQS;
+  de negócio (CEP inexistente, sem hub/rota possível) → publica **`route.failed`**, sem retry;
+  de contrato (campo obrigatório ausente, JSON malformado) → exceção imediata e explícita →
+  **DLQ** após 3 receives (preserva a evidência). `maxReceiveCount: 3` é deliberado: uma
+  _poison message_ bloqueia no máximo ~3 × 60 s — e só o grupo daquele pacote.
+- **Ownership:** a `Route` deste serviço é a **source of truth**; o `RouteInfo` dentro do
+  pacote no `package-service` é uma **projeção eventualmente consistente**.
+
+---
+
 ## Falhas tratadas
 
 | Situação | Tipo | Comportamento |

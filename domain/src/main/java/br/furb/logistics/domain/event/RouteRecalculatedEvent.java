@@ -35,6 +35,7 @@ public class RouteRecalculatedEvent implements DomainEvent {
     @Builder
     public static class Payload {
         private final String packageId;
+        private final String destinationCep;
         private final String routeId;
         private final String reason;
         private final RouteCalculatedEvent.HubInfo originHub;
