@@ -12,14 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
-/**
- * Popula um grafo padrão de hubs e conexões para demonstração/desenvolvimento.
- * Roda apenas no perfil "local" e é idempotente: só semeia quando ainda não há hubs.
- * Os hubs são gravados com cidade/estado explícitos (sem consultar o ViaCEP), mas usando
- * cidades reais para que os CEPs dos pacotes resolvam para os mesmos municípios via ViaCEP.
- * O profile é verificado em runtime (e não via @Profile) porque, na imagem nativa, as
- * condições de @Profile são avaliadas em build-time do AOT e o bean seria podado.
- */
+// Guard de profile em runtime (não @Profile): no nativo as condições @Profile são avaliadas no build-time do AOT e o bean seria podado.
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -31,7 +24,7 @@ public class HubDataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (!environment.matchesProfiles("local")) {
+        if (!environment.matchesProfiles("prod")) {
             return;
         }
 
@@ -40,7 +33,7 @@ public class HubDataSeeder implements CommandLineRunner {
             return;
         }
 
-        log.info("[seed] Populando grafo padrão de hubs e conexões (perfil local)");
+        log.info("[seed] Populando grafo padrão de hubs e conexões");
 
         Hub blumenau = hubRepository.save(hub("Hub Blumenau", "89010000", "Blumenau", "SC", -26.9194, -49.0661));
         Hub joinville = hubRepository.save(hub("Hub Joinville", "89201000", "Joinville", "SC", -26.3045, -48.8487));

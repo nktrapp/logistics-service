@@ -74,15 +74,19 @@ services:
       - terraform-data:/terraform-data
 
   logistics-service:
+    build:
+      context: .
+      dockerfile: application/Dockerfile
     #image: 934347069710.dkr.ecr.us-east-1.amazonaws.com/furb-logistics/logistics-service:1.2.0
     image: nktrapp/logistics-service:1.0.5
     ports:
       - "0:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 8080
-      SPRING_MONGODB_URI: mongodb://mongodb:27017/logistics_db?directConnection=true
-      SPRING_DATA_REDIS_HOST: redis
+      MONGODB_URI: mongodb://mongodb:27017/logistics_db?directConnection=true
+      REDIS_HOST: redis
+      AWS_REGION: us-east-1
       SPRING_CLOUD_AWS_ENDPOINT: http://ministack:4566
       SPRING_CLOUD_AWS_SQS_ENDPOINT: http://ministack:4566
       SPRING_CLOUD_AWS_CREDENTIALS_ACCESS_KEY: test
@@ -92,6 +96,8 @@ services:
       APP_MESSAGING_INBOUND_QUEUE: package-events-queue.fifo
       APP_MESSAGING_OUTBOUND_QUEUE: logistics-events-queue.fifo
       APP_MESSAGING_HUB_EVENTS_QUEUE: hub-events-queue.fifo
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://localhost:4318/v1/traces
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -107,14 +113,18 @@ services:
       start_period: 20s
 
   package-service:
+    build:
+      context: ../package-service
+      dockerfile: application/Dockerfile
     #image: 934347069710.dkr.ecr.us-east-1.amazonaws.com/furb-logistics/package-service:1.2.0
     image: nktrapp/package-service:1.0.5
     ports:
       - "0:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 8080
-      SPRING_MONGODB_URI: mongodb://mongodb:27017/package_db?directConnection=true
+      MONGODB_URI: mongodb://mongodb:27017/package_db?directConnection=true
+      AWS_REGION: us-east-1
       SPRING_CLOUD_AWS_ENDPOINT: http://ministack:4566
       SPRING_CLOUD_AWS_SQS_ENDPOINT: http://ministack:4566
       SPRING_CLOUD_AWS_CREDENTIALS_ACCESS_KEY: test
@@ -122,6 +132,8 @@ services:
       SPRING_CLOUD_AWS_REGION_STATIC: us-east-1
       APP_MESSAGING_INBOUND_QUEUE: logistics-events-queue.fifo
       APP_MESSAGING_OUTBOUND_QUEUE: package-events-queue.fifo
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://localhost:4318/v1/traces
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0"
     depends_on:
       mongodb:
         condition: service_healthy
