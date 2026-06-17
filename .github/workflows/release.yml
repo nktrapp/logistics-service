@@ -72,14 +72,6 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Set up QEMU
-        if: ${{ env.SKIP_RELEASE != 'true' }}
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        if: ${{ env.SKIP_RELEASE != 'true' }}
-        uses: docker/setup-buildx-action@v3
-
       - name: Compute ECR image name
         if: ${{ env.SKIP_RELEASE != 'true' }}
         run: echo "IMAGE=${{ steps.ecr.outputs.registry }}/furb-logistics/logistics-service" >> "$GITHUB_ENV"
