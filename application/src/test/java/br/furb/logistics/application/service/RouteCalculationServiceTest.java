@@ -23,8 +23,8 @@ class RouteCalculationServiceTest {
     class BestRouteSelection {
 
         @Test
-        @DisplayName("Given multiple candidate pairs, should select the shortest reachable route")
-        void shouldSelectShortestReachableRouteWhenMultipleCandidatesAreAvailable() {
+        @DisplayName("Given the nearest origin and destination are reachable, should prefer them over a shorter path from a farther candidate")
+        void shouldPreferNearestCandidatesOverShorterHubPath() {
             Hub originOne = buildHub("origin-1", "Origin One");
             Hub originTwo = buildHub("origin-2", "Origin Two");
             Hub destinationOne = buildHub("destination-1", "Destination One");
@@ -43,37 +43,77 @@ class RouteCalculationServiceTest {
                     connections
             );
 
-            assertThat(selectedRoute.originHub().getId()).isEqualTo("origin-2");
+            assertThat(selectedRoute.originHub().getId()).isEqualTo("origin-1");
             assertThat(selectedRoute.destinationHub().getId()).isEqualTo("destination-1");
-            assertThat(selectedRoute.routeResult().totalDistanceKm()).isEqualTo(5.0);
-            assertThat(selectedRoute.routeResult().path()).containsExactly("origin-2", "destination-1");
+            assertThat(selectedRoute.routeResult().totalDistanceKm()).isEqualTo(15.0);
         }
 
         @Test
-        @DisplayName("Given tied route metrics, should choose the deterministic lexicographic candidate")
-        void shouldChooseDeterministicCandidateWhenRouteMetricsTie() {
-            Hub alphaOrigin = buildHub("origin-a", "Alpha Origin");
-            Hub betaOrigin = buildHub("origin-b", "Beta Origin");
-            Hub destination = buildHub("destination-1", "Destination");
+        @DisplayName("Given the nearest origin has no usable route, should fall back to the next-nearest origin candidate")
+        void shouldFallBackToNextNearestOriginWhenNearestIsUnreachable() {
+            Hub originOne = buildHub("origin-1", "Origin One");
+            Hub originTwo = buildHub("origin-2", "Origin Two");
+            Hub destination = buildHub("destination-1", "Destination One");
 
             List<HubConnection> connections = List.of(
-                    buildConnection("origin-a", "destination-1", 10, 2),
-                    buildConnection("origin-b", "destination-1", 10, 2)
+                    buildConnection("origin-2", "destination-1", 5, 1)
             );
 
             RouteCalculationService.SelectedRoute selectedRoute = routeCalculationService.selectBestRoute(
-                    List.of(betaOrigin, alphaOrigin),
+                    List.of(originOne, originTwo),
                     List.of(destination),
-                    List.of(alphaOrigin, betaOrigin, destination),
+                    List.of(originOne, originTwo, destination),
                     connections
             );
 
-            assertThat(selectedRoute.originHub().getId()).isEqualTo("origin-a");
-            assertThat(selectedRoute.routeResult().totalDistanceKm()).isEqualTo(10.0);
+            assertThat(selectedRoute.originHub().getId()).isEqualTo("origin-2");
+            assertThat(selectedRoute.destinationHub().getId()).isEqualTo("destination-1");
+            assertThat(selectedRoute.routeResult().totalDistanceKm()).isEqualTo(5.0);
         }
 
         @Test
-        @DisplayName("Given unreachable candidates, should throw exception when no route can be selected")
+        @DisplayName("Given a hub appears in both candidate lists, should route between distinct hubs instead of collapsing to a zero-distance self-loop")
+        void shouldNotCollapseToSelfLoopWhenCandidateListsOverlap() {
+            Hub hubA = buildHub("hub-a", "Hub A");
+            Hub hubB = buildHub("hub-b", "Hub B");
+
+            List<HubConnection> connections = List.of(
+                    buildConnection("hub-a", "hub-b", 79, 2)
+            );
+
+            RouteCalculationService.SelectedRoute selectedRoute = routeCalculationService.selectBestRoute(
+                    List.of(hubA, hubB),
+                    List.of(hubB, hubA),
+                    List.of(hubA, hubB),
+                    connections
+            );
+
+            assertThat(selectedRoute.originHub().getId()).isEqualTo("hub-a");
+            assertThat(selectedRoute.destinationHub().getId()).isEqualTo("hub-b");
+            assertThat(selectedRoute.originHub().getId()).isNotEqualTo(selectedRoute.destinationHub().getId());
+            assertThat(selectedRoute.routeResult().totalDistanceKm()).isEqualTo(79.0);
+        }
+
+        @Test
+        @DisplayName("Given sender and recipient resolve to the same nearest hub, should return a single-hub local route")
+        void shouldReturnSingleHubRouteWhenSenderAndRecipientShareNearestHub() {
+            Hub hub = buildHub("hub-x", "Hub X");
+
+            RouteCalculationService.SelectedRoute selectedRoute = routeCalculationService.selectBestRoute(
+                    List.of(hub),
+                    List.of(hub),
+                    List.of(hub),
+                    List.of()
+            );
+
+            assertThat(selectedRoute.originHub().getId()).isEqualTo("hub-x");
+            assertThat(selectedRoute.destinationHub().getId()).isEqualTo("hub-x");
+            assertThat(selectedRoute.routeResult().totalDistanceKm()).isEqualTo(0.0);
+            assertThat(selectedRoute.routeResult().path()).containsExactly("hub-x");
+        }
+
+        @Test
+        @DisplayName("Given distinct candidates with no connection between them, should throw when no route can be selected")
         void shouldThrowExceptionWhenNoCandidateRouteIsReachable() {
             Hub origin = buildHub("origin-1", "Origin");
             Hub destination = buildHub("destination-1", "Destination");

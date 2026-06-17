@@ -5,7 +5,6 @@ import br.furb.logistics.domain.model.Hub;
 import br.furb.logistics.domain.model.HubConnection;
 import lombok.extern.slf4j.Slf4j;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -13,47 +12,82 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.stream.Stream;
 
-/**
- * Implementa Dijkstra sobre o grafo de hubs para encontrar a rota de menor distância.
- */
 @Slf4j
 public class RouteCalculationService {
+
+    private static final String NO_ROUTE_AVAILABLE = "No route found for available hub candidates";
+
+    private static final Comparator<CandidateRoute> BY_PROXIMITY_THEN_COST =
+            Comparator.comparingInt(CandidateRoute::proximityRank)
+                    .thenComparingDouble(route -> route.routeResult().totalDistanceKm())
+                    .thenComparingInt(route -> route.routeResult().totalTransitHours())
+                    .thenComparing(route -> route.origin().getName())
+                    .thenComparing(route -> route.destination().getName())
+                    .thenComparing(route -> route.origin().getId())
+                    .thenComparing(route -> route.destination().getId());
 
     public SelectedRoute selectBestRoute(List<Hub> originCandidates,
                                          List<Hub> destinationCandidates,
                                          List<Hub> allHubs,
                                          List<HubConnection> allConnections) {
-        SelectedRoute bestRoute = null;
+        if (originCandidates.isEmpty() || destinationCandidates.isEmpty()) {
+            throw new RouteCalculationException(NO_ROUTE_AVAILABLE);
+        }
 
-        for (Hub originCandidate : sortCandidates(originCandidates)) {
-            for (Hub destinationCandidate : sortCandidates(destinationCandidates)) {
-                try {
-                    RouteResult routeResult = calculateShortestRoute(
-                            originCandidate.getId(),
-                            destinationCandidate.getId(),
-                            allHubs,
-                            allConnections
-                    );
+        Hub nearestOrigin = originCandidates.get(0);
+        Hub nearestDestination = destinationCandidates.get(0);
+        if (nearestOrigin.getId().equals(nearestDestination.getId())) {
+            return localDelivery(nearestOrigin, allHubs, allConnections);
+        }
 
-                    SelectedRoute candidateRoute = new SelectedRoute(originCandidate, destinationCandidate, routeResult);
-                    if (isBetter(candidateRoute, bestRoute)) {
-                        bestRoute = candidateRoute;
-                    }
-                } catch (RouteCalculationException e) {
-                    log.debug("[route-calc] Candidate route from {} to {} is not reachable",
-                            originCandidate.getId(), destinationCandidate.getId());
+        return transportRoutes(originCandidates, destinationCandidates, allHubs, allConnections)
+                .min(BY_PROXIMITY_THEN_COST)
+                .map(CandidateRoute::toSelectedRoute)
+                .orElseThrow(() -> new RouteCalculationException(NO_ROUTE_AVAILABLE));
+    }
+
+    private SelectedRoute localDelivery(Hub hub, List<Hub> allHubs, List<HubConnection> allConnections) {
+        RouteResult route = calculateShortestRoute(hub.getId(), hub.getId(), allHubs, allConnections);
+        return new SelectedRoute(hub, hub, route);
+    }
+
+    private Stream<CandidateRoute> transportRoutes(List<Hub> originCandidates,
+                                                   List<Hub> destinationCandidates,
+                                                   List<Hub> allHubs,
+                                                   List<HubConnection> allConnections) {
+        List<CandidateRoute> routes = new ArrayList<>();
+        for (int originRank = 0; originRank < originCandidates.size(); originRank++) {
+            Hub origin = originCandidates.get(originRank);
+            for (int destinationRank = 0; destinationRank < destinationCandidates.size(); destinationRank++) {
+                Hub destination = destinationCandidates.get(destinationRank);
+                if (isSameHub(origin, destination)) {
+                    continue;
                 }
+                int proximityRank = originRank + destinationRank;
+                reachableRoute(origin, destination, proximityRank, allHubs, allConnections).ifPresent(routes::add);
             }
         }
+        return routes.stream();
+    }
 
-        if (bestRoute == null) {
-            throw new RouteCalculationException("No route found for available hub candidates");
+    private Optional<CandidateRoute> reachableRoute(Hub origin, Hub destination, int proximityRank,
+                                                    List<Hub> allHubs, List<HubConnection> allConnections) {
+        try {
+            RouteResult route = calculateShortestRoute(origin.getId(), destination.getId(), allHubs, allConnections);
+            return Optional.of(new CandidateRoute(origin, destination, proximityRank, route));
+        } catch (RouteCalculationException notReachable) {
+            log.debug("[route-calc] Candidate route from {} to {} is not reachable", origin.getId(), destination.getId());
+            return Optional.empty();
         }
+    }
 
-        return bestRoute;
+    private boolean isSameHub(Hub first, Hub second) {
+        return first.getId().equals(second.getId());
     }
 
     public RouteResult calculateShortestRoute(String originHubId, String destinationHubId,
@@ -61,10 +95,6 @@ public class RouteCalculationService {
         log.info("[route-calc] Calculating route from hub {} to hub {}", originHubId, destinationHubId);
 
         Map<String, List<Edge>> adjacency = buildAdjacencyList(allConnections);
-        Map<String, Hub> hubMap = new HashMap<>();
-        for (Hub hub : allHubs) {
-            hubMap.put(hub.getId(), hub);
-        }
 
         Map<String, Double> distances = new HashMap<>();
         Map<String, String> previous = new HashMap<>();
@@ -95,8 +125,6 @@ public class RouteCalculationService {
 
             List<Edge> neighbors = adjacency.getOrDefault(current.hubId(), Collections.emptyList());
             for (Edge edge : neighbors) {
-                // Skip edges that point at a hub which is not part of the routable set
-                // (e.g. an inactive or removed hub still referenced by a connection).
                 if (!distances.containsKey(edge.destinationHubId())) {
                     continue;
                 }
@@ -158,57 +186,15 @@ public class RouteCalculationService {
         return path;
     }
 
-    private List<Hub> sortCandidates(List<Hub> candidates) {
-        return candidates.stream()
-                .sorted(Comparator.comparing(Hub::getName)
-                        .thenComparing(Hub::getCity)
-                        .thenComparing(Hub::getState)
-                        .thenComparing(Hub::getId))
-                .toList();
-    }
-
-    private boolean isBetter(SelectedRoute candidate, SelectedRoute currentBest) {
-        if (currentBest == null) {
-            return true;
-        }
-
-        int distanceComparison = Double.compare(
-                candidate.routeResult().totalDistanceKm(),
-                currentBest.routeResult().totalDistanceKm()
-        );
-        if (distanceComparison != 0) {
-            return distanceComparison < 0;
-        }
-
-        int transitComparison = Integer.compare(
-                candidate.routeResult().totalTransitHours(),
-                currentBest.routeResult().totalTransitHours()
-        );
-        if (transitComparison != 0) {
-            return transitComparison < 0;
-        }
-
-        int originNameComparison = candidate.originHub().getName().compareTo(currentBest.originHub().getName());
-        if (originNameComparison != 0) {
-            return originNameComparison < 0;
-        }
-
-        int destinationNameComparison = candidate.destinationHub().getName().compareTo(currentBest.destinationHub().getName());
-        if (destinationNameComparison != 0) {
-            return destinationNameComparison < 0;
-        }
-
-        int originIdComparison = candidate.originHub().getId().compareTo(currentBest.originHub().getId());
-        if (originIdComparison != 0) {
-            return originIdComparison < 0;
-        }
-
-        return candidate.destinationHub().getId().compareTo(currentBest.destinationHub().getId()) < 0;
-    }
-
     public record RouteResult(List<String> path, double totalDistanceKm, int totalTransitHours) {}
 
     public record SelectedRoute(Hub originHub, Hub destinationHub, RouteResult routeResult) {}
+
+    private record CandidateRoute(Hub origin, Hub destination, int proximityRank, RouteResult routeResult) {
+        SelectedRoute toSelectedRoute() {
+            return new SelectedRoute(origin, destination, routeResult);
+        }
+    }
 
     private record NodeDistance(String hubId, double distance) {}
 
