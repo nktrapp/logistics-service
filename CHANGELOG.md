@@ -1,3 +1,16 @@
+# [1.8.0](https://github.com/nktrapp/logistics-service/compare/v1.7.0...v1.8.0) (2026-06-17)
+
+
+### Bug Fixes
+
+* evita rota degenerada com origem igual ao destino na seleção de melhor rota ([a91bc5c](https://github.com/nktrapp/logistics-service/commit/a91bc5c398f36b78c4d86aeea891451e44e9e6e1))
+
+
+### Features
+
+* adiciona documentação de API com OpenAPI 3.1 (springdoc) ([0e28240](https://github.com/nktrapp/logistics-service/commit/0e282404d973809f073ae30d416e97c5feb1901b))
+* seleciona hubs de origem e destino pela proximidade geográfica do CEP ([a393093](https://github.com/nktrapp/logistics-service/commit/a39309323aa6f13f866398d9db68eb2c6777adb7))
+
 # [1.7.0](https://github.com/nktrapp/logistics-service/compare/v1.6.0...v1.7.0) (2026-06-10)
 
 
