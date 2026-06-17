@@ -42,7 +42,7 @@ management:
   opentelemetry:
     resource-attributes:
       "service.namespace": furb-logistics
-      "deployment.environment": ${APP_ENVIRONMENT:${spring.profiles.active:local}}
+      "deployment.environment": ${APP_ENVIRONMENT:${spring.profiles.active:prod}}
     tracing:
       export:
         otlp:
@@ -66,6 +66,16 @@ management:
       enabled: true
     git:
       enabled: true
+
+springdoc:
+  api-docs:
+    version: openapi_3_1
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
 
 server:
   port: ${SERVER_PORT:0}
@@ -94,6 +104,8 @@ app:
     auto-connect:
       neighbors: ${APP_ROUTING_AUTO_CONNECT_NEIGHBORS:3}            # nº de vizinhos mais próximos (K)
       avg-speed-kmh: ${APP_ROUTING_AUTO_CONNECT_AVG_SPEED_KMH:60}   # velocidade média p/ derivar transitTimeHours
+    candidate-hubs:
+      nearest: ${APP_ROUTING_CANDIDATE_HUBS_NEAREST:3}              # nº de hubs mais próximos (haversine) usados como candidatos de origem/destino
   outbox:
     relay:
       fixed-delay-ms: 2000

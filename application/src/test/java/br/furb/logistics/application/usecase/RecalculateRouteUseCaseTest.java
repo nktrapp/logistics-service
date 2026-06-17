@@ -1,5 +1,6 @@
 package br.furb.logistics.application.usecase;
 
+import br.furb.logistics.application.service.HubCandidateResolver;
 import br.furb.logistics.application.service.RouteCalculationService;
 import br.furb.logistics.application.usecase.transaction.PersistFailedRouteUseCase;
 import br.furb.logistics.application.usecase.transaction.PersistRecalculatedRouteUseCase;
@@ -52,6 +53,9 @@ class RecalculateRouteUseCaseTest {
     RouteCalculationService routeCalculationService;
 
     @Mock
+    HubCandidateResolver hubCandidateResolver;
+
+    @Mock
     PersistRecalculatedRouteUseCase persistRecalculatedRouteUseCase;
 
     @Mock
@@ -67,6 +71,7 @@ class RecalculateRouteUseCaseTest {
                 cepLookupPort,
                 inboxRepository,
                 routeCalculationService,
+                hubCandidateResolver,
                 persistRecalculatedRouteUseCase,
                 persistFailedRouteUseCase
         );
@@ -101,6 +106,7 @@ class RecalculateRouteUseCaseTest {
                 .build()));
         when(hubRepository.findAllActive()).thenReturn(List.of(originHub, destinationHub));
         when(hubConnectionRepository.findAll()).thenReturn(List.of());
+        when(hubCandidateResolver.resolve(any(), eq(List.of(originHub, destinationHub)))).thenReturn(List.of(destinationHub));
         when(routeCalculationService.selectBestRoute(
                 eq(List.of(originHub)),
                 eq(List.of(destinationHub)),

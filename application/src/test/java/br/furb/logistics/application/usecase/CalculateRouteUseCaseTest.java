@@ -2,6 +2,7 @@ package br.furb.logistics.application.usecase;
 
 import br.furb.logistics.application.dto.RouteResponse;
 import br.furb.logistics.application.mapper.RouteMapper;
+import br.furb.logistics.application.service.HubCandidateResolver;
 import br.furb.logistics.application.service.RouteCalculationService;
 import br.furb.logistics.application.usecase.transaction.PersistCalculatedRouteUseCase;
 import br.furb.logistics.application.usecase.transaction.PersistFailedRouteUseCase;
@@ -59,6 +60,9 @@ class CalculateRouteUseCaseTest {
     RouteCalculationService routeCalculationService;
 
     @Mock
+    HubCandidateResolver hubCandidateResolver;
+
+    @Mock
     PersistCalculatedRouteUseCase persistCalculatedRouteUseCase;
 
     @Mock
@@ -74,6 +78,7 @@ class CalculateRouteUseCaseTest {
                 cepLookupPort,
                 inboxRepository,
                 routeCalculationService,
+                hubCandidateResolver,
                 persistCalculatedRouteUseCase,
                 persistFailedRouteUseCase,
                 routeMapper
@@ -89,7 +94,7 @@ class CalculateRouteUseCaseTest {
         RouteResponse response = useCase.execute("event-1", "pkg-1", "89010000", "89200000");
 
         assertThat(response).isNull();
-        verifyNoInteractions(cepLookupPort, routeCalculationService, persistCalculatedRouteUseCase, persistFailedRouteUseCase);
+        verifyNoInteractions(cepLookupPort, hubCandidateResolver, routeCalculationService, persistCalculatedRouteUseCase, persistFailedRouteUseCase);
     }
 
     @Test
@@ -106,6 +111,7 @@ class CalculateRouteUseCaseTest {
         when(cepLookupPort.findByCep("89200000")).thenReturn(Optional.of(buildCep("89200000", "Joinville", "SC")));
         when(hubRepository.findAllActive()).thenReturn(List.of(originHub, destinationHub));
         when(hubConnectionRepository.findAll()).thenReturn(List.of());
+        when(hubCandidateResolver.resolve(any(), any())).thenReturn(List.of(originHub, destinationHub));
         when(routeCalculationService.selectBestRoute(any(), any(), any(), any()))
                 .thenReturn(new RouteCalculationService.SelectedRoute(originHub, destinationHub, result));
         when(routeRepository.findByPackageId("pkg-1")).thenReturn(Optional.empty());
@@ -163,6 +169,7 @@ class CalculateRouteUseCaseTest {
         when(cepLookupPort.findByCep("89200000")).thenReturn(Optional.of(buildCep("89200000", "Joinville", "SC")));
         when(hubRepository.findAllActive()).thenReturn(List.of(buildHub("origin-1", "Origin", "Blumenau", "SC")));
         when(hubConnectionRepository.findAll()).thenReturn(List.of());
+        when(hubCandidateResolver.resolve(any(), any())).thenReturn(List.of(buildHub("origin-1", "Origin", "Blumenau", "SC")));
         when(routeCalculationService.selectBestRoute(any(), any(), any(), any()))
                 .thenThrow(new RouteCalculationException("no reachable hub"));
 

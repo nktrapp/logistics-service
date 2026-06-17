@@ -1,5 +1,6 @@
 package br.furb.logistics.application.usecase;
 
+import br.furb.logistics.application.service.HubCandidateResolver;
 import br.furb.logistics.application.service.RouteCalculationService;
 import br.furb.logistics.application.usecase.transaction.PersistFailedRouteUseCase;
 import br.furb.logistics.application.usecase.transaction.PersistRecalculatedRouteUseCase;
@@ -25,7 +26,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.nonNull;
-import static org.springframework.util.CollectionUtils.isEmpty;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -37,6 +37,7 @@ public class RecalculateRouteUseCase {
     private final CepLookupPort cepLookupPort;
     private final InboxRepositoryPort inboxRepository;
     private final RouteCalculationService routeCalculationService;
+    private final HubCandidateResolver hubCandidateResolver;
     private final PersistRecalculatedRouteUseCase persistRecalculatedRouteUseCase;
     private final PersistFailedRouteUseCase persistFailedRouteUseCase;
 
@@ -49,7 +50,6 @@ public class RecalculateRouteUseCase {
         log.info("[recalculate-route] Recalculating route for package {} to new CEP {}", packageId, newRecipientCep);
 
         try {
-            // External lookups (ViaCEP) and the routing computation run OUTSIDE the write transaction.
             Route existingRoute = routeRepository.findByPackageId(packageId).orElse(null);
 
             CepInfo destinationCepInfo = cepLookupPort.findByCep(newRecipientCep)
@@ -57,11 +57,9 @@ public class RecalculateRouteUseCase {
 
             List<Hub> allHubs = hubRepository.findAllActive();
             List<HubConnection> allConnections = hubConnectionRepository.findAll();
-            List<Hub> destinationHubs = getActiveCandidates(destinationCepInfo.getCity(), destinationCepInfo.getState(), allHubs);
+            List<Hub> destinationHubs = hubCandidateResolver.resolve(destinationCepInfo, allHubs);
 
-            // The sender did not change: when a route already exists, reuse its origin hub.
-            // Otherwise derive the origin from the sender CEP, exactly like the initial calculation
-            // (never fall back to an arbitrary hub).
+            // Remetente não mudou: reusa o hub de origem da rota existente; senão deriva do CEP, como no cálculo inicial.
             List<Hub> originCandidates;
             List<Hub> routingHubs;
             if (nonNull(existingRoute)) {
@@ -71,7 +69,7 @@ public class RecalculateRouteUseCase {
             } else {
                 CepInfo originCepInfo = cepLookupPort.findByCep(senderCep)
                         .orElseThrow(() -> new CepValidationException(senderCep));
-                originCandidates = getActiveCandidates(originCepInfo.getCity(), originCepInfo.getState(), allHubs);
+                originCandidates = hubCandidateResolver.resolve(originCepInfo, allHubs);
                 routingHubs = allHubs;
             }
 
@@ -159,22 +157,5 @@ public class RecalculateRouteUseCase {
                 List<Hub> routingHubs = new ArrayList<>(activeHubs);
                 routingHubs.add(originHub);
                 return routingHubs;
-        }
-
-        private List<Hub> getActiveCandidates(String city, String state, List<Hub> activeHubs) {
-                // Prefer active hubs in the same city+state.
-                List<Hub> cityCandidates = activeHubs.stream()
-                                .filter(hub -> state.equalsIgnoreCase(hub.getState()) && city.equalsIgnoreCase(hub.getCity()))
-                                .toList();
-                if (!isEmpty(cityCandidates)) {
-                        return cityCandidates;
-                }
-
-                // Fall back to active hubs in the same state (regional) instead of every hub in the network.
-                // When no same-state hub exists the candidate list is empty and route selection fails explicitly,
-                // rather than silently routing the package through arbitrary, unrelated hubs.
-                return activeHubs.stream()
-                                .filter(hub -> state.equalsIgnoreCase(hub.getState()))
-                                .toList();
         }
 }

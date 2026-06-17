@@ -3,6 +3,7 @@ package br.furb.logistics.application.config;
 import br.furb.logistics.application.mapper.HubConnectionMapper;
 import br.furb.logistics.application.mapper.HubMapper;
 import br.furb.logistics.application.mapper.RouteMapper;
+import br.furb.logistics.application.service.HubCandidateResolver;
 import br.furb.logistics.application.service.HubMeshService;
 import br.furb.logistics.application.service.RouteCalculationService;
 import br.furb.logistics.application.usecase.BuildHubConnectionsUseCase;
@@ -40,6 +41,12 @@ public class UseCaseConfig {
     @Bean
     public HubMeshService hubMeshService() {
         return new HubMeshService();
+    }
+
+    @Bean
+    public HubCandidateResolver hubCandidateResolver(MunicipalityGeocodingPort municipalityGeocodingPort,
+                                                     @Value("${app.routing.candidate-hubs.nearest:3}") int maxNearest) {
+        return new HubCandidateResolver(municipalityGeocodingPort, maxNearest);
     }
 
     @Bean
@@ -89,12 +96,13 @@ public class UseCaseConfig {
                                                        CepLookupPort cepLookupPort,
                                                        InboxRepositoryPort inboxRepository,
                                                        RouteCalculationService routeCalculationService,
+                                                       HubCandidateResolver hubCandidateResolver,
                                                        PersistCalculatedRouteUseCase persistCalculatedRouteUseCase,
                                                        PersistFailedRouteUseCase persistFailedRouteUseCase,
                                                        RouteMapper routeMapper) {
         return new CalculateRouteUseCase(routeRepository, hubRepository, hubConnectionRepository,
-                cepLookupPort, inboxRepository, routeCalculationService, persistCalculatedRouteUseCase,
-                persistFailedRouteUseCase, routeMapper);
+                cepLookupPort, inboxRepository, routeCalculationService, hubCandidateResolver,
+                persistCalculatedRouteUseCase, persistFailedRouteUseCase, routeMapper);
     }
 
     @Bean
@@ -104,11 +112,12 @@ public class UseCaseConfig {
                                                            CepLookupPort cepLookupPort,
                                                            InboxRepositoryPort inboxRepository,
                                                            RouteCalculationService routeCalculationService,
+                                                           HubCandidateResolver hubCandidateResolver,
                                                            PersistRecalculatedRouteUseCase persistRecalculatedRouteUseCase,
                                                            PersistFailedRouteUseCase persistFailedRouteUseCase) {
         return new RecalculateRouteUseCase(routeRepository, hubRepository, hubConnectionRepository,
-                cepLookupPort, inboxRepository, routeCalculationService, persistRecalculatedRouteUseCase,
-                persistFailedRouteUseCase);
+                cepLookupPort, inboxRepository, routeCalculationService, hubCandidateResolver,
+                persistRecalculatedRouteUseCase, persistFailedRouteUseCase);
     }
 
     @Bean
