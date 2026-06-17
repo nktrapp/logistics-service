@@ -13,6 +13,7 @@ mapstruct = "1.6.3"
 jakartaValidation = "3.1.1"
 sonarqube = "7.3.1.8318"
 graalvm = "1.1.1"
+springdoc = "3.0.3"
 
 [libraries]
 # Spring Boot starters (versions managed by the Spring Boot BOM)
@@ -31,6 +32,8 @@ spring-cloud-aws-dependencies = { module = "io.awspring.cloud:spring-cloud-aws-d
 spring-cloud-aws-starter-sqs = { module = "io.awspring.cloud:spring-cloud-aws-starter-sqs" }
 
 jackson-databind = { module = "tools.jackson.core:jackson-databind" }
+
+springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 
 jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api", version.ref = "jakartaValidation" }
 mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }

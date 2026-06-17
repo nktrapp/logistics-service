@@ -26,6 +26,7 @@ dependencies {
     implementation libs.spring.cloud.aws.starter.sqs
     implementation libs.jackson.databind
     implementation libs.mapstruct
+    implementation libs.springdoc.openapi.starter.webmvc.ui
 
     annotationProcessor libs.mapstruct.processor
     annotationProcessor libs.lombok.mapstruct.binding

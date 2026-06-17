@@ -42,6 +42,10 @@ class AotBeanGraphContractTest {
                         "HubDataSeeder__BeanDefinitions.java",
                         "UseCaseConfig__BeanDefinitions.java");
 
+        assertThat(generatedFiles)
+                .as("the customized OpenAPI bean must survive AOT so the spec is available in the native image")
+                .contains("OpenApiConfig__BeanDefinitions.java");
+
         assertThat(containsOtlpSpanExporter())
                 .as("OtlpHttpSpanExporter must be registered — a property default of false silently prunes it from the image (regression F-03)")
                 .isTrue();

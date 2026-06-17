@@ -2,6 +2,11 @@ package br.furb.logistics.application.adapter.in.web;
 
 import br.furb.logistics.application.dto.RouteResponse;
 import br.furb.logistics.application.usecase.GetRouteUseCase;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,19 +20,36 @@ import static org.springframework.util.StringUtils.hasText;
 @RestController
 @RequestMapping("/api/v1/routes")
 @RequiredArgsConstructor
+@Tag(name = "Routes", description = "Consulta das rotas calculadas para os pacotes")
 public class RouteRestAdapter {
 
     private final GetRouteUseCase getRouteUseCase;
 
+    @Operation(summary = "Busca uma rota por id")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Rota encontrada"),
+            @ApiResponse(responseCode = "404", description = "Rota não encontrada")
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<RouteResponse> getById(@PathVariable String id) {
+    public ResponseEntity<RouteResponse> getById(
+            @Parameter(description = "Identificador da rota", example = "665f1b2c9a3e4d0012ab34cd")
+            @PathVariable String id) {
         return getRouteUseCase.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Operation(summary = "Busca a rota de um pacote",
+            description = "Retorna a rota calculada para o pacote informado pelo parâmetro packageId.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Rota encontrada"),
+            @ApiResponse(responseCode = "400", description = "Parâmetro packageId ausente"),
+            @ApiResponse(responseCode = "404", description = "Rota não encontrada para o pacote")
+    })
     @GetMapping
-    public ResponseEntity<RouteResponse> getByPackageId(@RequestParam(required = false) String packageId) {
+    public ResponseEntity<RouteResponse> getByPackageId(
+            @Parameter(description = "Identificador do pacote", example = "665f1b2c9a3e4d0012ab34cd")
+            @RequestParam(required = false) String packageId) {
         if (!hasText(packageId)) {
             return ResponseEntity.badRequest().build();
         }
