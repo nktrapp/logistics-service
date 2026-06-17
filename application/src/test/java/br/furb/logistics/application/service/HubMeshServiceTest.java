@@ -90,7 +90,6 @@ class HubMeshServiceTest {
     void shouldNotDuplicateExistingPair() {
         Hub newHub = hub("blu", -26.92, -49.07);
         List<Hub> allHubs = List.of(newHub, hub("joi", -26.30, -48.85), hub("fln", -27.59, -48.55));
-        // Pre-existing manual connection joi<->blu (reversed direction on purpose).
         List<HubConnection> existing = List.of(HubConnection.builder()
                 .originHubId("joi").destinationHubId("blu")
                 .distanceKm(BigDecimal.valueOf(70)).transitTimeHours(2).build());
@@ -123,7 +122,6 @@ class HubMeshServiceTest {
     @DisplayName("Given two candidates at the same location and K=1, should break the tie by hub id")
     void shouldBreakDistanceTieByHubId() {
         Hub newHub = hub("origin", -26.0, -49.0);
-        // Identical coordinates -> bit-identical distance -> the tie must be resolved by hub id.
         List<Hub> allHubs = List.of(newHub, hub("b-hub", -27.0, -48.0), hub("a-hub", -27.0, -48.0));
 
         List<HubConnection> connections = hubMeshService.computeConnections(newHub, allHubs, List.of(), 1, AVG_SPEED_KMH);

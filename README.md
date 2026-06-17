@@ -7,10 +7,10 @@ usando **Dijkstra** sobre esse grafo. Resolve CEPs em cidade/estado via **ViaCEP
 Comunica-se com o `package-service` exclusivamente de forma **assíncrona**, por mensagens
 SQS FIFO (nunca por HTTP direto).
 
-- Porta local: **http://localhost:8082** (via `docker compose`, container expõe 8080)
+- Porta HTTP: definida por `SERVER_PORT` (a app expõe 8080 no container)
 - Banco: MongoDB (`logistics_db`) — precisa ser **replica set** (transações do outbox/inbox)
 - Cache: Redis (cache de CEPs do ViaCEP, TTL 24h)
-- Mensageria: SQS FIFO (MiniStack no ambiente local)
+- Mensageria: SQS FIFO
 
 ---
 
@@ -171,10 +171,10 @@ Actuator em `/management` (`health`, `info`, `metrics`, `loggers`).
 
 ---
 
-## Data Seeder (perfil `local`)
+## Data Seeder (perfil `prod`)
 
 `HubDataSeeder` popula um **grafo padrão** no startup quando o banco está vazio (idempotente,
-só no perfil `local`). Útil para demonstração: os fluxos de pacote já funcionam sem cadastrar
+no perfil `prod`). Útil para demonstração: os fluxos de pacote já funcionam sem cadastrar
 hubs à mão.
 
 ```
@@ -192,9 +192,12 @@ batem com o que o ViaCEP retorna, de modo que pacotes com esses CEPs casam com o
 ## Como executar e testar
 
 ```bash
-# stack completo (os dois serviços + Mongo + Redis + MiniStack), a partir da raiz do repositório:
-docker compose up -d --build
+# build + testes (inclui processAot e o guard test de AOT):
+./gradlew build
 ```
 
-Testes HTTP prontos em [`http/logistics.http`](http/logistics.http). Guia de validação
-manual ponta a ponta em [`../VALIDATION.md`](../VALIDATION.md).
+O serviço roda apenas como **imagem nativa GraalVM** publicada (perfil `prod`), apontando para
+um MongoDB (replica set), SQS e um coletor OTLP acessíveis via env vars — não há mais stack
+local de `docker compose` nem perfil `local`.
+
+Testes HTTP prontos em [`http/logistics.http`](http/logistics.http).

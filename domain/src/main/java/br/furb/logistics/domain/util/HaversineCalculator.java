@@ -2,9 +2,6 @@ package br.furb.logistics.domain.util;
 
 import br.furb.logistics.domain.model.Coordinates;
 
-/**
- * Calcula a distância geográfica (great-circle) entre dois pontos pela fórmula de Haversine.
- */
 public final class HaversineCalculator {
 
     private static final double EARTH_RADIUS_KM = 6371.0088;

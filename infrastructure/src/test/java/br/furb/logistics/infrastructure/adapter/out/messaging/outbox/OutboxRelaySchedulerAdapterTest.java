@@ -141,7 +141,6 @@ class OutboxRelaySchedulerAdapterTest {
 
             ArgumentCaptor<Instant> nextAttemptCaptor = ArgumentCaptor.forClass(Instant.class);
             verify(outboxRepository).markForRetry(eq("event-1"), eq("boom"), nextAttemptCaptor.capture(), eq(5));
-            // retryCount = 3 -> 5000ms * 2^3 = 40000ms
             assertThat(nextAttemptCaptor.getValue())
                     .isBetween(before.plusMillis(40000), after.plusMillis(40000));
         }
@@ -175,7 +174,6 @@ class OutboxRelaySchedulerAdapterTest {
 
             ArgumentCaptor<Instant> nextAttemptCaptor = ArgumentCaptor.forClass(Instant.class);
             verify(outboxRepository).markForRetry(eq("event-1"), eq("boom"), nextAttemptCaptor.capture(), eq(5));
-            // retryCount = 10 -> 5000ms * 2^10 = 5_120_000ms, capped to 60000ms
             assertThat(nextAttemptCaptor.getValue())
                     .isBetween(before.plusMillis(60000), after.plusMillis(60000));
         }

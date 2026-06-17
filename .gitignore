@@ -9,7 +9,6 @@ bin/
 !gradle/wrapper/gradle-wrapper.properties
 
 # ─── IDE ───
-.claude/
 .idea/
 *.iml
 *.iws

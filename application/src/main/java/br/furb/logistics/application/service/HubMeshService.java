@@ -14,14 +14,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Constrói, de forma incremental, as arestas (HubConnection) de um hub recém-criado ligando-o aos
- * seus K vizinhos mais próximos (distância haversine). A estratégia é aditiva: nunca remove arestas
- * existentes e nunca duplica um par já conectado (inclusive conexões cadastradas manualmente).
- *
- * Determinismo: o desempate de distância é feito pelo id do hub, então reprocessar o mesmo hub
- * produz exatamente as mesmas arestas, independentemente da ordem de entrada dos candidatos.
- */
 @Slf4j
 public class HubMeshService {
 

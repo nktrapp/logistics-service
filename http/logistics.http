@@ -1,7 +1,7 @@
 ###############################################################################
 # logistics-service — testes HTTP
 # Porta local: 8082. Execute as requisições de cima para baixo.
-# Observação: no perfil "local" o HubDataSeeder já cria um grafo padrão de hubs.
+# Observação: no perfil "prod" o HubDataSeeder já cria um grafo padrão de hubs.
 ###############################################################################
 @host = http://furb-logistics-prod-alb-2133099297.us-east-1.elb.amazonaws.com
 

@@ -11,11 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
- * Escrita transacional da malha automática: reivindica o inbox (idempotência), persiste as conexões
- * calculadas e emite hub.connections.created. O claim do inbox sempre ocorre (mesmo sem conexões)
- * para que um hub.created já tratado não seja reprocessado.
- */
 @Slf4j
 @RequiredArgsConstructor
 public class PersistHubConnectionsUseCase {

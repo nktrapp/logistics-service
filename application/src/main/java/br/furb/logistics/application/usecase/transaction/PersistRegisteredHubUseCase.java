@@ -8,10 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Escrita transacional do cadastro de hub: persiste o hub e emite hub.created no outbox de forma
- * atômica. ViaCEP e geocoding ficam fora desta transação (resolvidos por {@code RegisterHubUseCase}).
- */
 @Slf4j
 @RequiredArgsConstructor
 public class PersistRegisteredHubUseCase {

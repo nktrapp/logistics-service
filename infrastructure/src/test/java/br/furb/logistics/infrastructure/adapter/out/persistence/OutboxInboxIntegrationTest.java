@@ -120,15 +120,12 @@ class OutboxInboxIntegrationTest {
     void outboxReclaimsOnlyAfterTimeout() {
         outboxRepository.save(sampleEvent());
 
-        // First claim moves the entry to IN_PROGRESS (processingStartedAt = first).
         Instant first = Instant.now();
         assertThat(outboxRepository.claimPending(10, first, first.minusSeconds(60))).hasSize(1);
 
-        // Still inside the processing-timeout window -> not re-claimed.
         Instant beforeTimeout = first.plusSeconds(30);
         assertThat(outboxRepository.claimPending(10, beforeTimeout, beforeTimeout.minusSeconds(60))).isEmpty();
 
-        // After the timeout (retryTimedOutBefore is between the original and the new claim instant) -> re-claimed once.
         Instant afterTimeout = first.plusSeconds(120);
         assertThat(outboxRepository.claimPending(10, afterTimeout, first.plusSeconds(60))).hasSize(1);
     }

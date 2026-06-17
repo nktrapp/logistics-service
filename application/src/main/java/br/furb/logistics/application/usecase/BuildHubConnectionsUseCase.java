@@ -13,11 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Reage ao evento hub.created: calcula os K vizinhos mais próximos do hub recém-criado e persiste as
- * conexões automaticamente. O cálculo (carga de hubs + haversine) fica fora da transação; só a
- * escrita (inbox + conexões + outbox) é transacional, espelhando o fluxo de cálculo de rota.
- */
 @Slf4j
 @RequiredArgsConstructor
 public class BuildHubConnectionsUseCase {

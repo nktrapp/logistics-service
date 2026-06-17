@@ -20,11 +20,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Resolve coordenadas de municípios a partir de uma base local do IBGE empacotada como resource
- * (geo/municipios.csv). Os dados são carregados uma única vez na inicialização para mapas em memória,
- * evitando qualquer chamada externa adicional além do ViaCEP.
- */
 @Slf4j
 @Component
 @ImportRuntimeHints(IbgeCsvMunicipalityAdapter.GeoResourceHints.class)

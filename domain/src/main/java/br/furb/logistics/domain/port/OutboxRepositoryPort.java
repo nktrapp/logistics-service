@@ -17,17 +17,10 @@ public interface OutboxRepositoryPort {
 
     long deletePublishedBefore(Instant threshold);
 
-    /** Counts events that exhausted all publish retries (status FAILED) and require manual replay. */
     long countFailed();
 
-    /**
-     * True if another event of the same group precedes (createdAt, _id) and is not yet
-     * PUBLISHED (PENDING, IN_PROGRESS or FAILED). A FAILED head deliberately blocks the
-     * whole group until manual replay: per-group ordering is chosen over group liveness.
-     */
     boolean existsEarlierUnpublished(String groupId, Instant createdAt, String outboxId);
 
-    /** Returns a claimed entry to PENDING without counting a retry (ordering deferral, not a failure). */
     void releaseClaim(String eventId, Instant nextAttemptAt);
 
     record OutboxEntry(

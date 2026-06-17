@@ -25,13 +25,7 @@ public class MongoInboxRepositoryAdapter implements InboxRepositoryPort {
         return mongoRepository.existsByEventId(eventId);
     }
 
-    /**
-     * Idempotent claim implemented as an upsert with $setOnInsert: an insert failure
-     * (DuplicateKeyException) inside a MongoDB transaction aborts the whole transaction
-     * even if caught, making the commit fail on redelivery of an already-processed event.
-     * The upsert matches the existing document instead of erroring, so the surrounding
-     * transaction stays healthy and the duplicate is acked instead of retried to the DLQ.
-     */
+    // Upsert idempotente: um insert duplicado dentro da transação Mongo a abortaria; o match no upsert a mantém sã.
     @Override
     public boolean saveIfAbsent(String eventId, String eventType) {
         Query query = Query.query(Criteria.where("eventId").is(eventId));
